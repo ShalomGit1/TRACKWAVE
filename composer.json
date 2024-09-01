@@ -1,0 +1,17 @@
+{
+    "name": "trackwave/trackwave-project",
+    "description": "RFID attendance system",
+    "type": "library",
+    "require": {
+        "hyperthese/php-serial": "^1.0",
+        "phpoffice/phpspreadsheet": "^2.2"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "trackwave",
+            "email": "shalomopara65@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable"
+}

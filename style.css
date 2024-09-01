@@ -1,0 +1,506 @@
+/* @font-face {
+    font-family: 'MADE Outer Sans Alt';
+    src: url(fonts/MADEOuterSans.woff);
+} */
+
+
+
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    
+    
+    
+    
+
+
+
+}
+.grid-background {
+    background: linear-gradient(to bottom right, rgb(241,241,242), rgb(244,244,245));
+
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+z-index: -1; /* Ensure grid is behind content */
+background-size: 200px 200px;
+background-image: linear-gradient(to right, rgba(204, 204, 204, 0.19) 2px, transparent 1px),
+              linear-gradient(to bottom, rgba(204, 204, 204, 0.163) 2px, transparent 1px);
+}
+
+
+
+html,body{
+    height: 100%;
+    width: 100%;
+    background-color:radial-gradient(circle at 10% 20%, #c7dbeef6, transparent),
+    radial-gradient(circle at 50% 80%,#f893f8c1, transparent),
+    radial-gradient(circle at 90% 10%, #6e42c1e0, transparent),
+    radial-gradient(circle at 80% 50%,#07e7d0d3, transparent),
+    radial-gradient(circle at 20% 80%, #3f51b5df, transparent);
+    
+
+}
+nav{
+    padding: 10px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    height: 70px;
+    /* background-color: transparent; */
+
+
+}
+.logo{
+    color: black;
+    font-family: 'MADE Outer Sans Alt';
+    font-weight: 900;
+    font-style: normal;
+    cursor: pointer;
+
+}
+nav ul{
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+nav ul li{
+    list-style-type: none;
+}
+nav ul li a{
+    font-family: 'MADE Outer Sans';
+    font-weight: 300;
+    font-style: normal;
+    text-decoration: none;
+    color: black;
+    transition: 0.5s ease;
+}
+nav ul li a:hover{
+    font-weight: bold;
+
+
+}
+.menu-icon{
+    display: none;
+}
+.menu-icon i{
+    color: black;
+    font-size: 30px;
+    /* display: none; */
+}
+.btn {
+    background-color: orange;
+    border: none;
+}
+
+.button{
+    padding: 8px 17px;
+    border-radius: 5px;
+    border: none;
+    /* background-color: rgba(252, 227, 136, 1); */
+    background-color: orange;
+    color: black;
+    transition: 0.5s ease;
+}
+.button a{
+    color: black;
+    text-decoration: none;
+    font-family: 'MADE Outer Sans';
+    font-weight: 300;
+    font-style: normal;
+
+}
+.button:hover{
+    background-color: rgba(248, 230, 165, 0.8);
+
+} 
+
+
+/* ---------------------------hero session css----------------------- */
+.content{
+    width: 100%;
+    position: relative;
+    top: 20vh;
+    transform: translateY(-50%);
+    text-align: center;
+    /* position: fixed; */
+    /* padding-top: 20vh; */
+    
+
+}
+.content h1{
+    font-family: 'MADE Outer Sans Alt';
+    font-weight: bold;
+    font-style: normal;
+    font-size: 50px;
+   
+    
+     
+}
+.content h2{
+    font-family: 'MADE Outer Sans Alt';
+    font-weight: 100;
+    font-style: normal;
+    font-style: normal;
+    font-size: 50px;
+
+
+}
+.content p{
+    font-family: 'MADE Outer Sans';
+    font-weight: 200;
+    font-style: normal;
+}
+
+/* --------------------------below hero session---------------------- */
+.sec-one{
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 25px;
+    padding: 20vh;
+
+}
+.box{
+    width: 40vh;
+    background-color: rgba(249, 248, 248, 1);
+    border-radius: 5px;
+    display: flex;
+    padding: 10px;
+    height: 15vh;
+    padding: 20px;
+    align-items: center;
+    gap: 10px;
+    font-size: 10px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.103);
+    /* color: #ffffff; */
+    
+
+}
+.box-icon{
+    width: 40px;
+    height: 40px;
+    border-radius: 5px;
+    background-color: rgba(243, 243, 243, 1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+}
+.box-txt h1{
+    font-family: 'MADE Outer Sans';
+    font-weight: 300;
+    font-style: normal;
+    font-size: 13px;
+
+}
+.box-txt p{
+    font-family: 'MADE Outer Sans';
+    font-weight: 200;
+    font-style: normal;
+
+}
+
+.box-icon i{
+    font-size: 30px;
+    color:rgba(240, 209, 99, 1);
+    
+}
+.about-head{
+    text-align: center;
+    font-weight: bolder;
+    font-family: 'MADE Outer Sans Alt';
+    font-weight: bold;
+    font-style: normal;
+}
+
+.about-con{
+    padding: 10vh;
+    display: flex;
+    gap: 50px;
+    align-items: center;
+    justify-content: center;
+}
+.about-box{
+    height: 300px;
+    width: 300px;
+    background-color: rgba(252, 251, 251, 0.82);
+    padding: 30px 40px;
+    border-radius: 20px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.144);
+
+}
+.about-box h1{
+    margin-bottom: 40px;
+    font-family: 'MADE Outer Sans Alt';
+    font-weight: bold;
+    font-style: normal;
+    font-size: 15px;
+}
+.about-box p{
+    font-family: 'MADE Outer Sans';
+    font-weight: 200;
+    font-style: normal;
+    font-size: 12px;
+
+}
+/* -----------------------why use us-------------------- */
+.why-use-us-text h1{
+    font-family: 'MADE Outer Sans Alt';
+    font-weight: bold;
+    font-style: normal;
+    font-size: 15px;
+
+}
+.why-use-us-text{
+    text-align: center;
+}
+
+.WHY-USE-US-CON{
+    padding: 20vh;
+    display: flex;
+    width: 100%;
+    gap: 150px;
+
+}
+.card-img{
+   
+    width: 90vh;
+    height: 90vh;
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    
+  
+}
+.card-img img {
+    max-width: 100%;
+    max-height: 100%;
+    /* Optional: to ensure the image scales down if necessary */
+}
+.card-text{
+    width: 70vh;
+    height: 70vh;
+    padding: 30px;
+    /* background-color: red; */
+}
+.card-text h1{
+    /* padding-bottom: 2vh; */
+    font-family: 'MADE Outer Sans Alt';
+    font-weight: bold;
+    font-style: normal;
+    font-size: 20px;
+    
+}
+.card-text p{
+    padding-bottom: 5vh;
+    /* letter-spacing: 5px; */
+    line-height: 40px;
+    font-family: 'MADE Outer Sans';
+    font-weight: 200;
+    font-style: normal;
+    
+}
+/* -------------------------footer------------------------- */
+/* .footer{
+    background: red;
+    padding-top: 50px;
+
+}
+.footer-con{
+    width: 1140px;
+    margin: auto;
+    display: flex;
+    
+
+}
+.footer{
+    width: 100%;
+
+
+}
+.footer-con h3{
+    font-size: 23px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+.footer-con p{
+    width: 100px;
+    margin: auto;
+    padding:7px ;
+
+}
+.footer-con ul{
+    text-align: center;
+
+
+}
+.footer-con li{
+    padding: 0;
+
+}
+.footer-con li a{
+    width: auto;
+    text-align: center;
+    list-style-type: none;
+    padding: 7px;
+    position: relative;
+} */
+.site-footer {
+    background-color: #333;
+    color: white;
+    padding: 20px 0;
+  }
+  
+  .container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 0 15px;
+  }
+  
+  .footer-about,.footer-links,.footer-contact {
+    flex: 1;
+    min-width: 200px;
+    margin-bottom: 20px;
+  }
+  
+  .footer-links ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .footer-links li {
+    margin-bottom: 10px;
+  }
+  
+  .footer-links a {
+    color: #fff;
+    text-decoration: none;
+  }
+  
+  .footer-links a:hover {
+    background-color: white;
+    /* font-size: 10px; */
+  }
+  
+  h3 {
+    margin-top: 0;
+  }
+  
+  .icon-style {
+    width: 20px;
+    height: 20px;
+    margin: 0 10px;
+  }
+  .footer-content-right a{
+    /* gap: 30px; */
+    margin-left: 20px;
+  }
+  .footer-content-right i{
+    color: white;
+
+  }
+  /* Media query for responsive design */
+  @media (max-width: 600px) {
+   .container {
+      flex-direction: column;
+      align-items: center;
+    }
+  
+   .footer-about,.footer-links,.footer-contact {
+      min-width: 100%;
+      text-align: center;
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* --------------------------------res media---------------------- */
+@media(max-width:991px){
+    .sidebar {
+        background-color: rgba(240, 17, 17, 0.144);
+        backdrop-filter: blur(10px);
+    }
+    nav ul{
+        position: absolute;
+        top: 70px;
+        left: 0;
+        right: 0;
+       
+        text-align: center;
+        overflow: hidden;
+        background-color: black;
+     
+        
+        
+    }
+    nav ul li{
+        padding: 20px;
+        /* color: ; */
+    }
+    nav ul li a{
+        color: white;
+    }
+    .menu-icon{
+        display: block;
+    }
+    #menuList{
+        transition: all 0.5s;
+    }
+    .content h1{
+        font-size: 40px;
+    }
+    .content h2{
+        font-size: 40px;
+        font-weight: lighter;
+    }
+    .content p{
+        font-size: 8px;
+        font-weight: lighter;
+    }
+   
+    
+
+}
+@media(max-width:170vh){
+    .about-con{
+        /* display: block; */
+        flex-direction: column;
+    }
+    .WHY-USE-US-CON{
+        flex-direction: column;
+        align-items: center;
+
+    }
+
+}
+@media(max-width:991px){
+    .sidebar {
+        background-color: rgba(225, 225, 225, 0.15);
+        backdrop-filter: blur(10px);
+}}

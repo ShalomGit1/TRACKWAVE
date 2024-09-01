@@ -1,0 +1,3849 @@
+<?php
+session_start();
+if (!isset($_SESSION["user"])) {
+    header("location: login.php");
+    exit;
+}
+
+// Database connection
+$server = 'localhost';
+$username = 'root';
+$password = '';
+$database = 'student_attendance';
+
+$connection = new mysqli($server, $username, $password, $database);
+if ($connection->connect_error) {
+    die("Connection failed: " . $connection->connect_error);
+}
+
+// Fetch current user's name and email for profile display
+// $user_email = $_SESSION["user"]["email"];
+// $user_name = $_SESSION["user"]["name"];
+
+// Fetch session history
+$current_time = date('Y-m-d H:i:s');
+$session_history = [];
+$history_query = "SELECT s.session_id, s.start_time, s.end_time, GROUP_CONCAT(a.rfid_tag SEPARATOR ', ') AS attendees
+                  FROM sessions s
+                  LEFT JOIN attendance a ON a.timestamp BETWEEN s.start_time AND s.end_time
+                  WHERE s.end_time <= '$current_time'
+                  GROUP BY s.session_id, s.start_time, s.end_time
+                  ORDER BY s.start_time DESC";
+$history_result = $connection->query($history_query);
+
+if ($history_result) {
+    while ($row = $history_result->fetch_assoc()) {
+        $session_history[] = $row;
+    }
+} else {
+    echo "Error fetching session history: " . $connection->error;
+}
+
+// Use attendance data from session if available
+$current_attendees = isset($_SESSION['attendance_data']) ? $_SESSION['attendance_data'] : [];
+
+// Optionally clear the session data after use
+unset($_SESSION['attendance_data']);
+
+$connection->close();
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.15.4/css/all.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            padding-top: 3.5rem;
+            transition: margin-left 0.3s;
+        }
+
+        #content {
+            margin-left: 250px;
+            padding: 20px;
+            transition: margin-left 0.3s;
+        }
+
+        .nav-link {
+            color: white !important;
+        }
+
+        .nav-link:hover {
+            color: #f8f9fa !important;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: -250px;
+            }
+
+            #sidebar.collapsed {
+                margin-left: -250px;
+            }
+
+            #content {
+                margin-left: 0;
+            }
+        }
+
+        .custom-card {
+            min-height: 150px;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-card i {
+            font-size: 3rem;
+            color: #6c757d;
+        }
+
+        .custom-card1 {
+            border-left: 5px solid #6c757d;
+        }
+
+        .custom-card2 {
+            border-left: 5px solid #198754;
+        }
+
+        .custom-card3 {
+            border-left: 5px solid #dc3545;
+        }
+
+        .custom-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0;
+        }
+
+        .custom-card p {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+        .nav-link:hover {
+             background-color: #616161; /* a random blue color _/
+             color: #ffffff; /_ white text */
+              text-decoration: none;
+              }
+
+                  .nav-link:hover .fa-solid {
+                  color: #fff; /* yellow icon */
+                }
+
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="p-4">
+            <h4>Dashboard</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showDashboard()"></i><i class="fa-solid fa-house mx-2"></i>Dashboard</a>
+                    
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showCreateSession()"><i class="fa-solid fa-plus mx-2"></i>Create Session</a>
+                </li>
+                <li class="nav-item">
+                
+                    <a class="nav-link" href="#" onclick="showHistory()" ><i class="fa-solid fa-clock-rotate-left mx-2"></i>History</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showProfile()"><i class="fa-solid fa-user mx-2"></i>Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link " href="logout.php" onclick="logout()"><i class="fa-solid fa-right-from-bracket mx-2 "></i>Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!-- /#sidebar -->
+
+    <!-- Page Content -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <button type="button" id="sidebarCollapse" class="btn btn-dark" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="navbar-brand mx-auto">Dashboard</span>
+            </div>
+        </nav>
+
+        <!-- Dynamic Content Sections -->
+        <div id="main-content">
+            <!-- Dashboard Content -->
+            <div id="dashboard-content" class="content active container-fluid px-4">
+                <div class="row g-3 my-2">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card1">
+                            <div>
+                                <h3 class="fs-2">63</h3>
+                                <p class="fs-5">Total Attendance</p>
+                            </div>
+                            <i class="fas fa-clipboard-user fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card2">
+                            <div>
+                                <h3 class="fs-2">52</h3>
+                                <p class="fs-5">Student Present</p>
+                            </div>
+                            <i class="fas fa-school fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card3">
+                            <div>
+                                <h3 class="fs-2">3</h3>
+                                <p class="fs-5">Student Absent</p>
+                            </div>
+                            <i class="fas fa-clipboard-user fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 my-2">
+                    <div class="col-12">
+                        <div class="p-3 bg-white shadow-sm rounded">
+                            <h4>Current Attendees</h4>
+                            <?php if (!empty($current_attendees)): ?>
+                                <ul class="list-group">
+                                    <?php foreach ($current_attendees as $attendee): ?>
+                                        <li class="list-group-item"><?php echo $attendee['rfid_tag'] . ' - ' . $attendee['timestamp']; ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                <p>No current attendees.</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Session Content -->
+            <div id="create-session-content" class="content container-fluid px-4" style="display: none;">
+                <div class="row my-4">
+                    <div class="col-12">
+                        <div class="p-4 bg-white shadow-sm rounded">
+                            <h4>Create New Session</h4>
+                            <form action="create_session.php" method="post">
+                                <div class="mb-3">
+                                    <label for="start_time" class="form-label">Start Time</label>
+                                    <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="end_time" class="form-label">End Time</label>
+                                    <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Create Session</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Content -->
+            <div id="history-content" class="content container-fluid px-4" style="display: none;">
+                <div class="row my-4">
+                    <div class="col-12">
+                        <div class="p-4 bg-white shadow-sm rounded">
+                            <h4>Session History</h4>
+                            <?php if (!empty($session_history)): ?>
+                                <ul class="list-group">
+                                    <?php foreach ($session_history as $session): ?>
+                                        <li class="list-group-item">
+                                            <strong>Session ID:</strong> <?php echo $session['session_id']; ?>,
+                                            <strong>Start Time:</strong> <?php echo $session['start_time']; ?>,
+                                            <strong>End Time:</strong> <?php echo $session['end_time']; ?>,
+                                            <strong>Attendees:</strong> <?php echo $session['attendees']; ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                <p>No session history found.</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Content -->
+            <div id="profile-content" class="content container-fluid px-4" style="display: none;">
+                <div class="row my-4">
+                    <div class="col-12">
+                        <div class="p-4 bg-white shadow-sm rounded">
+                            <h4>Profile</h4>
+                            <p><strong>Name:</strong> <!-- <?php echo $user_name; ?> --></p>
+                            <p><strong>Email:</strong> <!-- <?php echo $user_email; ?> --></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /#content -->
+    <script src="https://kit.fontawesome.com/da3601086d.js" crossorigin="anonymous"></script>
+
+    <script>
+        
+        function toggleSidebar() {
+            document.getElementById("sidebar").classList.toggle("collapsed");
+        }
+
+        function showDashboard() {
+            hideAllContent();
+            document.getElementById("dashboard-content").style.display = "block";
+        }
+
+        function showCreateSession() {
+            hideAllContent();
+            document.getElementById("create-session-content").style.display = "block";
+        }
+
+        function showHistory() {
+            hideAllContent();
+            document.getElementById("history-content").style.display = "block";
+        }
+
+        function showProfile() {
+            hideAllContent();
+            document.getElementById("profile-content").style.display = "block";
+        }
+
+        function hideAllContent() {
+            document.querySelectorAll(".content").forEach(function(content) {
+                content.style.display = "none";
+            });
+        }
+
+        function logout() {
+            // Add logout functionality here if needed
+        }
+
+        // Initialize to show dashboard by default
+        document.addEventListener("DOMContentLoaded", function() {
+            showDashboard();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<?php
+session_start();
+$conn = new mysqli("localhost", "root", "", "student_attendance");
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $start_time = $_POST['start_time'];
+    $end_time = $_POST['end_time'];
+
+    $sql = "INSERT INTO sessions (start_time, end_time) VALUES ('$start_time', '$end_time')";
+
+    if ($conn->query($sql) === TRUE) {
+        $attendance_sql = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+        $attendance_result = $conn->query($attendance_sql);
+
+        $attendance_data = [];
+        if ($attendance_result->num_rows > 0) {
+            while ($row = $attendance_result->fetch_assoc()) {
+                $attendance_data[] = $row;
+            }
+        } else {
+            echo "<div class='alert alert-warning'>No attendance data found for the specified time range.</div>";
+        }
+
+        // Store attendance data in session
+        $_SESSION['attendance_data'] = $attendance_data;
+
+        // Redirect back to the dashboard
+        header("Location: dashboard.php?start_time=$start_time&end_time=$end_time");
+        exit();
+    } else {
+        echo "<div class='alert alert-danger'>Error creating session: " . $conn->error . "</div>";
+    }
+}
+$conn->close();
+?>
+
+
+
+<?php
+session_start();
+
+if (!isset($_SESSION["admin"])) {
+    header("location: admin_login.php");
+    exit;
+}
+
+// Admin dashboard content
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - TrackWave</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the Admin Dashboard, <?php echo $_SESSION["fullname"]; ?></h1>
+        <a href="logout.php" class="btn btn-danger">Logout</a>
+        <!-- Add your admin dashboard content here -->
+    </div>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+admin dashboard
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complex Gradient Background</title>
+  <style>
+    body {
+      background: radial-gradient(circle at 10% 20%, #c7dbeef6, transparent),
+                  radial-gradient(circle at 50% 80%,#f893f8c1, transparent),
+                  radial-gradient(circle at 90% 10%, #6e42c1e0, transparent),
+                  radial-gradient(circle at 80% 50%,#07e7d0d3, transparent),
+                  radial-gradient(circle at 20% 80%, #3f51b5df, transparent);
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+      background-color: #ffffff; /* Fallback color */
+    }
+
+    .container {
+      text-align: center;
+      color: #fff;
+    }
+
+    h1 {
+      font-size: 3em;
+      margin: 0;
+    }
+
+    p {
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to My Website</h1>
+    <p>This is an example of a complex gradient background.</p>
+  </div>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+dashboard.php code 
+
+
+
+
+
+
+
+<?php
+session_start();
+
+// Check if user_id is set in session
+if (!isset($_SESSION["user_id"]) || empty($_SESSION["user_id"])) {
+    // Redirect user to login page if not logged in
+    header("location: login.php");
+    exit;
+}
+
+// Now you can safely use $_SESSION["user_id"]
+$user_id = $_SESSION["user_id"];
+
+// Example: Retrieve user information based on user_id
+require_once "database.php";
+$sql = "SELECT * FROM users WHERE id = $user_id";
+$result = mysqli_query($conn, $sql);
+if ($result) {
+    $user = mysqli_fetch_assoc($result);
+    if ($user) {
+        echo "Welcome, " . $user['full_name'];
+    } else {
+        echo "User not found.";
+    }
+} else {
+    echo "Error: " . mysqli_error($conn);
+}
+
+// Close connection
+mysqli_close($conn);
+?>
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.15.4/css/all.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 250px;
+            /* background-color: red; */
+            color: white;
+            padding-top: 3.5rem;
+            transition: margin-left 0.3s;
+            background-color: #f4f4f5;
+            color:#68686a;
+            border:1px solid #e4e4e6;
+        }
+
+        #content {
+            margin-left: 250px;
+            padding: 10px;
+            transition: margin-left 0.3s;
+        }
+
+        .nav-link {
+            color: #68686a !important;
+        }
+
+        .nav-link:hover {
+            color: #f8f9fa !important;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: -250px;
+            }
+
+            #sidebar.collapsed {
+                margin-left: -250px;
+            }
+
+            #content {
+                margin-left: 0;
+            }
+        }
+
+        .custom-card {
+            min-height: 70px;
+            padding: 10px;
+            background-color: #ffffff;
+            /* box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); */
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-card i {
+            font-size: 2rem;
+            color: #6c757d;
+        }
+
+        .custom-card1 {
+            border-left: 2px solid #6c757d;
+        }
+
+        .custom-card2 {
+            border-left: 2px solid #198754;
+        }
+
+        .custom-card3 {
+            border-left: 2px solid #dc3545;
+            
+        }
+
+        .custom-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0;
+        }
+
+        .custom-card p {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+        .nav-link:hover {
+             background-color: #616161; /* a random blue color _/
+             color: #ffffff; /_ white text */
+              text-decoration: none;
+              }
+
+                  .nav-link:hover .fa-solid {
+                  color: #fff; /* yellow icon */
+                }
+
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="p-4">
+            <h4>Dashboard</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showDashboard()"></i><i class="fa-solid fa-house mx-2"></i>Dashboard</a>
+                    
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showCreateSession()"><i class="fa-solid fa-plus mx-2"></i>Create Session</a>
+                </li>
+                <li class="nav-item">
+                
+                    <a class="nav-link" href="#" onclick="showHistory()" ><i class="fa-solid fa-clock-rotate-left mx-2"></i>History</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showProfile()"><i class="fa-solid fa-address-card mx-2"></i>Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link " href="logout.php" onclick="logout()"><i class="fa-solid fa-right-from-bracket mx-2 "></i>Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!-- /#sidebar -->
+
+    <!-- Page Content -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <button type="button" id="sidebarCollapse" class="btn btn-dark" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="navbar-brand mx-auto">Dashboard</span>
+            </div>
+        </nav>
+
+        <!-- Dynamic Content Sections -->
+        <div id="main-content">
+            <!-- Dashboard Content -->
+            <div id="dashboard-content" class="content active container-fluid px-4">
+                <div class="row g-3 my-2">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card1">
+                            <div>
+                                <h3 class="fs-2">63</h3>
+                                <p class="fs-5">Total Attendance</p>
+                            </div>
+                            <i class="fas fa-clipboard-user fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card2">
+                            <div>
+                                <h3 class="fs-2">52</h3>
+                                <p class="fs-5">Student Present</p>
+                            </div>
+                            <i class="fas fa-school fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card3">
+                            <div>
+                                <h3 class="fs-2">3</h3>
+                                <p class="fs-5">Student Absent</p>
+                            </div>
+                            <i class="fas fa-clipboard-user fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 my-2">
+                    <div class="col-12">
+                        <div class="p-3 bg-white shadow-sm rounded">
+                            <h4>Current Attendees</h4>
+                            <?php if (!empty($current_attendees)): ?>
+                                <ul class="list-group">
+                                    <?php foreach ($current_attendees as $attendee): ?>
+                                        <li class="list-group-item"><?php echo $attendee['rfid_tag'] . ' - ' . $attendee['timestamp']; ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php else: ?>
+                                <p>No current attendees.</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Session Content -->
+            <div id="create-session-content" class="content container-fluid px-4" style="display: none;">
+                <div class="row my-4">
+                    <div class="col-12">
+                        <div class="p-4 bg-white shadow-sm rounded">
+                            <h4>Create New Session</h4>
+                            <form action="create_session.php" method="post">
+                                <div class="mb-3">
+                                    <label for="start_time" class="form-label">Start Time</label>
+                                    <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="end_time" class="form-label">End Time</label>
+                                    <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="background-color:black; border:none;">Create Session</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Content -->
+            <div id="history-content" class="content container-fluid px-4" style="display: none;">
+    <div class="row my-4">
+        <div class="col-12">
+            <div class="p-4 bg-white shadow-sm rounded">
+                <h4>Session History</h4>
+                <?php if (!empty($session_history)): ?>
+                    <ul class="list-group">
+                        <?php foreach ($session_history as $session): ?>
+                            <li class="list-group-item">
+                                <strong>Session ID:</strong> <?php echo $session['session_id']; ?>,
+                                <strong>Start Time:</strong> <?php echo $session['start_time']; ?>,
+                                <strong>End Time:</strong> <?php echo $session['end_time']; ?>,
+                                <strong>Attendees:</strong> <?php echo $session['attendees']; ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p>No session history found.</p>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <!-- Profile Content -->
+            <div id="profile-content" class="content container-fluid px-4" style="display: none;">
+                <div class="row my-4">
+                    <div class="col-12">
+                        <div class="p-4 bg-white shadow-sm rounded">
+                            <h4>Profile</h4>
+                            <p><strong>Name:</strong> <!-- <?php echo $user_name; ?> --></p>
+                            <p><strong>Email:</strong> <!-- <?php echo $user_email; ?> --></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /#content -->
+    <script src="https://kit.fontawesome.com/da3601086d.js" crossorigin="anonymous"></script>
+
+    <script>
+        
+        function toggleSidebar() {
+            document.getElementById("sidebar").classList.toggle("collapsed");
+        }
+
+        function showDashboard() {
+            hideAllContent();
+            document.getElementById("dashboard-content").style.display = "block";
+        }
+
+        function showCreateSession() {
+            hideAllContent();
+            document.getElementById("create-session-content").style.display = "block";
+        }
+
+        function showHistory() {
+            hideAllContent();
+            document.getElementById("history-content").style.display = "block";
+        }
+
+        function showProfile() {
+            hideAllContent();
+            document.getElementById("profile-content").style.display = "block";
+        }
+
+        function hideAllContent() {
+            document.querySelectorAll(".content").forEach(function(content) {
+                content.style.display = "none";
+            });
+        }
+
+        function logout() {
+            // Add logout functionality here if needed
+        }
+
+        // Initialize to show dashboard by default
+        document.addEventListener("DOMContentLoaded", function() {
+            showDashboard();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+dashboard working 2
+
+
+
+<?php
+session_start();
+
+// Check if user_id is set in session
+if (!isset($_SESSION["user_id"]) || empty($_SESSION["user_id"])) {
+    // Redirect user to login page if not logged in
+    header("location: login.php");
+    exit;
+}
+
+require_once "database.php"; // Adjust the path as per your file structure
+
+// Initialize variables
+$current_attendees = [];
+$session_history = [];
+
+// Handle session creation form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Sanitize input data
+    $start_time = mysqli_real_escape_string($conn_attendance, $_POST["start_time"]);
+    $end_time = mysqli_real_escape_string($conn_attendance, $_POST["end_time"]);
+    $session_name = mysqli_real_escape_string($conn_attendance, $_POST["session_name"]);
+
+    // Insert session into sessions table
+    $sql_insert = "INSERT INTO sessions (start_time, end_time, session_name) VALUES ('$start_time', '$end_time', '$session_name')";
+    if (mysqli_query($conn_attendance, $sql_insert)) {
+        // Session created successfully
+        echo "<script>alert('Session created successfully');</script>";
+
+        // Fetch attendees from attendance table for the newly created session
+        $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+        $result = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+        if ($result && mysqli_num_rows($result) > 0) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $current_attendees[] = $row;
+            }
+        } else {
+            echo "No attendees found.";
+        }
+    } else {
+        echo "Error: " . mysqli_error($conn_attendance);
+    }
+}
+
+/// Fetch current attendees and session history
+// Example logic to fetch session history - replace with your actual logic
+$sql_fetch_sessions = "SELECT * FROM sessions ORDER BY start_time DESC";
+$result_sessions = mysqli_query($conn_attendance, $sql_fetch_sessions);
+
+if ($result_sessions && mysqli_num_rows($result_sessions) > 0) {
+    while ($row = mysqli_fetch_assoc($result_sessions)) {
+        // Fetch attendees for each session from attendance table
+        $start_time = $row['start_time'];
+        $end_time = $row['end_time'];
+        $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+        $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+        
+        $attendees = [];
+        if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+            while ($attendee_row = mysqli_fetch_assoc($result_attendees)) {
+                $attendees[] = $attendee_row['rfid_tag'];
+            }
+        }
+        
+        // Prepare session history data
+        $row['attendees'] = implode(", ", $attendees); // Example: Comma-separated list of attendees
+        $session_history[] = $row;
+    }
+} else {
+    echo "No session history found.";
+}
+// Retrieve user information based on user_id
+$user_id = $_SESSION["user_id"];
+$sql_user = "SELECT * FROM users WHERE id = $user_id";
+$result_user = mysqli_query($conn_login, $sql_user);
+
+if ($result_user) {
+    $user = mysqli_fetch_assoc($result_user);
+    if ($user) {
+        $user_name = $user['full_name'];
+        $user_email = $user['email'];
+    } else {
+        echo "User not found.";
+    }
+} else {
+    echo "Error: " . mysqli_error($conn_login);
+}
+
+// Close connections
+mysqli_close($conn_attendance);
+mysqli_close($conn_login);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.15.4/css/all.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 250px;
+            background-color: #f4f4f5;
+            color: #68686a;
+            border: 1px solid #e4e4e6;
+            padding-top: 3.5rem;
+            transition: margin-left 0.3s;
+        }
+
+        #content {
+            margin-left: 250px;
+            padding: 10px;
+            transition: margin-left 0.3s;
+        }
+
+        .nav-link {
+            color: #68686a !important;
+        }
+
+        .nav-link:hover {
+            color: #f8f9fa !important;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: -250px;
+            }
+
+            #sidebar.collapsed {
+                margin-left: -250px;
+            }
+
+            #content {
+                margin-left: 0;
+            }
+        }
+
+        .custom-card {
+            min-height: 70px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-card i {
+            font-size: 2rem;
+            color: #6c757d;
+        }
+
+        .custom-card1 {
+            border-left: 2px solid #6c757d;
+        }
+
+        .custom-card2 {
+            border-left: 2px solid #198754;
+        }
+
+        .custom-card3 {
+            border-left: 2px solid #dc3545;
+        }
+
+        .custom-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0;
+        }
+
+        .custom-card p {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+
+        .nav-link:hover {
+            background-color: #616161;
+            color: #ffffff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="p-4">
+            <h4>Dashboard</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showDashboard()"><i class="fa-solid fa-house mx-2"></i>Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showCreateSession()"><i class="fa-solid fa-plus mx-2"></i>Create Session</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showHistory()"><i class="fa-solid fa-clock-rotate-left mx-2"></i>History</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showProfile()"><i class="fa-solid fa-address-card mx-2"></i>Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="logout.php" onclick="logout()"><i class="fa-solid fa-right-from-bracket mx-2"></i>Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!-- /#sidebar -->
+
+    <!-- Page Content -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <button type="button" id="sidebarCollapse" class="btn btn-dark" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="navbar-brand mx-auto">Dashboard</span>
+            </div>
+        </nav>
+
+        <!-- Dynamic Content Sections -->
+        <div id="main-content">
+            <!-- Dashboard Content -->
+            <div id="dashboard-content" class="content active container-fluid px-4">
+                <div class="row g-3 my-2">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card1">
+                            <div>
+                                <h3 class="fs-2">63</h3>
+                                <p class="fs-5">Total Attendance</p>
+                            </div>
+                            <i class="fas fa-clipboard-user fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card2">
+                            <div>
+                                <h3 class="fs-2">52</h3>
+                                <p class="fs-5">Student Present</p>
+                            </div>
+                            <i class="fas fa-school fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card3">
+                            <div>
+                                <h3 class="fs-2">20</h3>
+                                <p class="fs-5">Student Absent</p>
+                            </div>
+                            <i class="fas fa-walking fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 my-2">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                Active Sessions
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Session Name</th>
+                                                <th>Start Time</th>
+                                                <th>End Time</th>
+                                                <th>Attendees</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($session_history as $session) : ?>
+                                                <tr>
+                                                    <td><?php echo $session['session_name']; ?></td>
+                                                    <td><?php echo $session['start_time']; ?></td>
+                                                    <td><?php echo $session['end_time']; ?></td>
+                                                    <td><?php echo $session['attendees']; ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /Dashboard Content -->
+
+            <!-- Create Session Content -->
+            <div id="create-session-content" class="content container-fluid px-4" style="display: none;">
+                <h2>Create Session</h2>
+                <form method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>">
+                    <div class="mb-3">
+                        <label for="session_name" class="form-label">Session Name</label>
+                        <input type="text" class="form-control" id="session_name" name="session_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="start_time" class="form-label">Start Time</label>
+                        <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="end_time" class="form-label">End Time</label>
+                        <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Session</button>
+                </form>
+            </div>
+            <!-- /Create Session Content -->
+
+            <!-- History Content -->
+            <div id="history-content" class="content container-fluid px-4" style="display: none;">
+                <h2>Session History</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Session Name</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Attendees</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($session_history as $session) : ?>
+                                <tr>
+                                    <td><?php echo $session['session_name']; ?></td>
+                                    <td><?php echo $session['start_time']; ?></td>
+                                    <td><?php echo $session['end_time']; ?></td>
+                                    <td><?php echo $session['attendees']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- /History Content -->
+
+            <!-- Profile Content -->
+            <div id="profile-content" class="content container-fluid px-4" style="display: none;">
+                <h2>User Profile</h2>
+                <p>Name: <?php echo $user_name; ?></p>
+                <p>Email: <?php echo $user_email; ?></p>
+            </div>
+            <!-- /Profile Content -->
+        </div>
+        <!-- /Dynamic Content Sections -->
+    </div>
+    <!-- /Page Content -->
+
+    <!-- JavaScript libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+
+    <script>
+        // JavaScript functions for toggling content
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        function showDashboard() {
+            document.getElementById('dashboard-content').style.display = 'block';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showCreateSession() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'block';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showHistory() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'block';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showProfile() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'block';
+        }
+
+        function logout() {
+            // Implement logout function
+            // Example: redirect to logout.php
+            window.location.href = 'logout.php';
+        }
+    </script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+working code nnow
+
+
+
+
+
+
+
+
+<?php
+session_start();
+
+// Check if user_id is set in session
+if (!isset($_SESSION["user_id"]) || empty($_SESSION["user_id"])) {
+    // Redirect user to login page if not logged in
+    header("location: login.php");
+    exit;
+}
+
+require_once "database.php"; // Adjust the path as per your file structure
+
+// Initialize variables
+$current_attendees = [];
+$session_history = [];
+
+// Handle session creation form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Sanitize input data
+    $start_time = mysqli_real_escape_string($conn_attendance, $_POST["start_time"]);
+    $end_time = mysqli_real_escape_string($conn_attendance, $_POST["end_time"]);
+    $session_name = mysqli_real_escape_string($conn_attendance, $_POST["session_name"]);
+
+    // Insert session into sessions table
+    $sql_insert = "INSERT INTO sessions (start_time, end_time, session_name) VALUES ('$start_time', '$end_time', '$session_name')";
+    if (mysqli_query($conn_attendance, $sql_insert)) {
+        // Session created successfully
+        echo "<script>alert('Session created successfully');</script>";
+
+        // Fetch attendees from attendance table for the newly created session
+        $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+        $result = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+        if ($result && mysqli_num_rows($result) > 0) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $current_attendees[] = $row;
+            }
+        } else {
+            echo "No attendees found.";
+        }
+    } else {
+        echo "Error: " . mysqli_error($conn_attendance);
+    }
+}
+
+// /// Fetch current attendees and session history
+// // Example logic to fetch session history - replace with your actual logic
+// $sql_fetch_sessions = "SELECT * FROM sessions ORDER BY start_time DESC";
+// $result_sessions = mysqli_query($conn_attendance, $sql_fetch_sessions);
+
+// if ($result_sessions && mysqli_num_rows($result_sessions) > 0) {
+//     while ($row = mysqli_fetch_assoc($result_sessions)) {
+//         // Fetch attendees for each session from attendance table
+//         $start_time = $row['start_time'];
+//         $end_time = $row['end_time'];
+//         $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+//         $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+        
+//         $attendees = [];
+//         if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+//             while ($attendee_row = mysqli_fetch_assoc($result_attendees)) {
+//                 $attendees[] = $attendee_row['rfid_tag'];
+//             }
+//         }
+        
+//         // Prepare session history data
+//         $row['attendees'] = implode(", ", $attendees); // Example: Comma-separated list of attendees
+//         $session_history[] = $row;
+//     }
+// } else {
+//     echo "No session history found.";
+// }
+// Retrieve user information based on user_id
+$user_id = $_SESSION["user_id"];
+$sql_user = "SELECT * FROM users WHERE id = $user_id";
+$result_user = mysqli_query($conn_login, $sql_user);
+
+if ($result_user) {
+    $user = mysqli_fetch_assoc($result_user);
+    if ($user) {
+        $user_name = $user['full_name'];
+        $user_email = $user['email'];
+    } else {
+        echo "User not found.";
+    }
+} else {
+    echo "Error: " . mysqli_error($conn_login);
+}
+
+// Close connections
+// mysqli_close($conn_attendance);
+// mysqli_close($conn_login);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.15.4/css/all.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 250px;
+            background-color: #f4f4f5;
+            color: #68686a;
+            border: 1px solid #e4e4e6;
+            padding-top: 3.5rem;
+            transition: margin-left 0.3s;
+        }
+
+        #content {
+            margin-left: 250px;
+            padding: 10px;
+            transition: margin-left 0.3s;
+        }
+
+        .nav-link {
+            color: #68686a !important;
+        }
+
+        .nav-link:hover {
+            color: #f8f9fa !important;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: -250px;
+            }
+
+            #sidebar.collapsed {
+                margin-left: -250px;
+            }
+
+            #content {
+                margin-left: 0;
+            }
+        }
+
+        .custom-card {
+            min-height: 70px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-card i {
+            font-size: 2rem;
+            color: #6c757d;
+        }
+
+        .custom-card1 {
+            border-left: 2px solid #6c757d;
+        }
+
+        .custom-card2 {
+            border-left: 2px solid #198754;
+        }
+
+        .custom-card3 {
+            border-left: 2px solid #dc3545;
+        }
+
+        .custom-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0;
+        }
+
+        .custom-card p {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+
+        .nav-link:hover {
+            background-color: #616161;
+            color: #ffffff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="p-4">
+            <h4>Dashboard</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showDashboard()"><i class="fa-solid fa-house mx-2"></i></i>Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showCreateSession()"><i class="fa-solid fa-plus mx-2"></i>Create Session</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showHistory()"><i class="fa-solid fa-clock-rotate-left mx-2"></i>History</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showProfile()"><i class="fa-solid fa-address-card mx-2"></i>Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="logout.php" onclick="logout()"><i class="fa-solid fa-right-from-bracket mx-2"></i>Logout</a>
+                </li>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+              
+                <li class="nav-item">
+                    <p>welcome,<?php echo $user_name; ?></p>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!-- /#sidebar -->
+
+    <!-- Page Content -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <button type="button" id="sidebarCollapse" class="btn btn-dark" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="navbar-brand mx-auto">Dashboard</span>
+            </div>
+        </nav>
+
+        <!-- Dynamic Content Sections -->
+        <div id="main-content">
+            <!-- Dashboard Content -->
+            <div id="dashboard-content" class="content active container-fluid px-4">
+                <div class="row g-3 my-2">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card1">
+                            <div>
+                                <h3 class="fs-2">63</h3>
+                                <p class="fs-5">Total Attendance</p>
+                            </div>
+                            <i class="fas fa-clipboard-user fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card2">
+                            <div>
+                                <h3 class="fs-2">52</h3>
+                                <p class="fs-5">Student Present</p>
+                            </div>
+                            <i class="fas fa-school fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card3">
+                            <div>
+                                <h3 class="fs-2">20</h3>
+                                <p class="fs-5">Student Absent</p>
+                            </div>
+                            <i class="fas fa-walking fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 my-2">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                Active Sessions
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                    <?php
+// Assuming you have a connection to the `student_attendance` database
+date_default_timezone_set('africa/lagos'); // Set the appropriate timezone
+
+$current_time = new DateTime();
+
+// Fetch the current active session
+$sql_fetch_current_session = "SELECT * FROM sessions WHERE end_time > NOW() ORDER BY start_time DESC LIMIT 1";
+$result_current_session = mysqli_query($conn_attendance, $sql_fetch_current_session);
+
+if ($result_current_session && mysqli_num_rows($result_current_session) > 0) {
+    $current_session = mysqli_fetch_assoc($result_current_session);
+    $start_time = $current_session['start_time'];
+    $end_time = $current_session['end_time'];
+
+    // Fetch attendees for the current session
+    $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+    $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+    
+    $attendees = [];
+    if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+        while ($attendee_row = mysqli_fetch_assoc($result_attendees)) {
+            $attendees[] = $attendee_row['rfid_tag'];
+        }
+    }
+
+    // Display current session and attendees
+    echo "<h3>Current Session</h3>";
+    echo "<table class='table table-striped'>";
+    echo "<thead><tr><th>Session Name</th><th>Start Time</th><th>End Time</th><th>Attendees</th></tr></thead>";
+    echo "<tbody>";
+    echo "<tr>";
+    echo "<td>" . $current_session['session_name'] . "</td>";
+    echo "<td>" . $start_time . "</td>";
+    echo "<td>" . $end_time . "</td>";
+    echo "<td>" . implode(", ", $attendees) . "</td>";
+    echo "</tr>";
+    echo "</tbody>";
+    echo "</table>";
+} else {
+    echo "<p>No active session found.</p>";
+}
+?>
+
+                                       
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /Dashboard Content -->
+
+            <!-- Create Session Content -->
+            <div id="create-session-content" class="content container-fluid px-4" style="display: none;">
+                <h2>Create Session</h2>
+                <form method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>">
+                    <div class="mb-3">
+                        <label for="session_name" class="form-label">Session Name</label>
+                        <input type="text" class="form-control" id="session_name" name="session_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="start_time" class="form-label">Start Time</label>
+                        <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="end_time" class="form-label">End Time</label>
+                        <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Session</button>
+                </form>
+            </div>
+            <!-- /Create Session Content -->
+
+            <!-- History Content -->
+            <div id="history-content" class="content container-fluid px-4" style="display: none;">
+                <h2>Session History</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                    <?php
+// Fetch session history
+$sql_fetch_sessions = "SELECT * FROM sessions ORDER BY start_time DESC";
+$result_sessions = mysqli_query($conn_attendance, $sql_fetch_sessions);
+
+$session_history = [];
+
+if ($result_sessions && mysqli_num_rows($result_sessions) > 0) {
+    while ($row = mysqli_fetch_assoc($result_sessions)) {
+        $start_time = $row['start_time'];
+        $end_time = $row['end_time'];
+
+        // Fetch attendees for each session from attendance table
+        $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+        $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+        
+        $attendees = [];
+        if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+            while ($attendee_row = mysqli_fetch_assoc($result_attendees)) {
+                $attendees[] = $attendee_row['rfid_tag'];
+            }
+        }
+        
+        // Prepare session history data
+        $row['attendees'] = implode(", ", $attendees); // Example: Comma-separated list of attendees
+        $session_history[] = $row;
+    }
+
+    // Display session history
+    echo "<h3>Session History</h3>";
+    echo "<table class='table table-striped'>";
+    echo "<thead><tr><th>Session Name</th><th>Start Time</th><th>End Time</th><th>Attendees</th></tr></thead>";
+    echo "<tbody>";
+    foreach ($session_history as $history) {
+        echo "<tr>";
+        echo "<td>" . $history['session_name'] . "</td>";
+        echo "<td>" . $history['start_time'] . "</td>";
+        echo "<td>" . $history['end_time'] . "</td>";
+        echo "<td>" . $history['attendees'] . "</td>";
+        echo "</tr>";
+    }
+    echo "</tbody>";
+    echo "</table>";
+} else {
+    echo "<p>No session history found.</p>";
+}
+?>
+
+                    </table>
+                </div>
+            </div>
+            <!-- /History Content -->
+
+            <!-- Profile Content -->
+            <div id="profile-content" class="content container-fluid px-4" style="display: none;">
+                <h2>User Profile</h2>
+                <p>Name: <?php echo $user_name; ?></p>
+                <p>Email: <?php echo $user_email; ?></p>
+            </div>
+            <!-- /Profile Content -->
+        </div>
+        <!-- /Dynamic Content Sections -->
+    </div>
+    <!-- /Page Content -->
+
+    <!-- JavaScript libraries -->
+    <script src="https://kit.fontawesome.com/da3601086d.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
+
+    <script>
+        // JavaScript functions for toggling content
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        function showDashboard() {
+            document.getElementById('dashboard-content').style.display = 'block';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showCreateSession() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'block';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showHistory() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'block';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showProfile() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'block';
+        }
+
+        function logout() {
+            // Implement logout function
+            // Example: redirect to logout.php
+            window.location.href = 'logout.php';
+        }
+    </script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+no duplicate code
+
+
+
+<?php
+session_start();
+
+// Check if user_id is set in session
+if (!isset($_SESSION["user_id"]) || empty($_SESSION["user_id"])) {
+    // Redirect user to login page if not logged in
+    header("location: login.php");
+    exit;
+}
+
+require_once "database.php"; // Adjust the path as per your file structure
+
+// Initialize variables
+$current_attendees = [];
+$session_history = [];
+
+// Handle session creation form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Sanitize input data
+    $start_time = mysqli_real_escape_string($conn_attendance, $_POST["start_time"]);
+    $end_time = mysqli_real_escape_string($conn_attendance, $_POST["end_time"]);
+    $session_name = mysqli_real_escape_string($conn_attendance, $_POST["session_name"]);
+
+    // Insert session into sessions table
+    $sql_insert = "INSERT INTO sessions (start_time, end_time, session_name) VALUES ('$start_time', '$end_time', '$session_name')";
+    if (mysqli_query($conn_attendance, $sql_insert)) {
+        // Session created successfully
+        echo "<script>alert('Session created successfully');</script>";
+
+        // Fetch attendees from attendance table for the newly created session
+        $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+        $result = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+        if ($result && mysqli_num_rows($result) > 0) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $current_attendees[] = $row;
+            }
+        } else {
+            echo "No attendees found.";
+        }
+    } else {
+        echo "Error: " . mysqli_error($conn_attendance);
+    }
+}
+
+// Retrieve user information based on user_id
+$user_id = $_SESSION["user_id"];
+$sql_user = "SELECT * FROM users WHERE id = $user_id";
+$result_user = mysqli_query($conn_login, $sql_user);
+
+if ($result_user) {
+    $user = mysqli_fetch_assoc($result_user);
+    if ($user) {
+        $user_name = $user['full_name'];
+        $user_email = $user['email'];
+    } else {
+        echo "User not found.";
+    }
+} else {
+    echo "Error: " . mysqli_error($conn_login);
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.15.4/css/all.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 250px;
+            background-color: #f4f4f5;
+            color: #68686a;
+            border: 1px solid #e4e4e6;
+            padding-top: 3.5rem;
+            transition: margin-left 0.3s;
+        }
+
+        #content {
+            margin-left: 250px;
+            padding: 10px;
+            transition: margin-left 0.3s;
+        }
+
+        .nav-link {
+            color: #68686a !important;
+        }
+
+        .nav-link:hover {
+            color: #f8f9fa !important;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: -250px;
+            }
+
+            #sidebar.collapsed {
+                margin-left: -250px;
+            }
+
+            #content {
+                margin-left: 0;
+            }
+        }
+
+        .custom-card {
+            min-height: 70px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-card i {
+            font-size: 2rem;
+            color: #6c757d;
+        }
+
+        .custom-card1 {
+            border-left: 2px solid #6c757d;
+        }
+
+        .custom-card2 {
+            border-left: 2px solid #198754;
+        }
+
+        .custom-card3 {
+            border-left: 2px solid #dc3545;
+        }
+
+        .custom-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0;
+        }
+
+        .custom-card p {
+            font-size: 1.2rem;
+            color: #6c757d;
+        }
+
+        .nav-link:hover {
+            background-color: #616161;
+            color: #ffffff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="p-4">
+            <h4>Dashboard</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showDashboard()"><i class="fa-solid fa-house mx-2"></i>Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showCreateSession()"><i class="fa-solid fa-plus mx-2"></i>Create Session</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showHistory()"><i class="fa-solid fa-clock-rotate-left mx-2"></i>History</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showProfile()"><i class="fa-solid fa-address-card mx-2"></i>Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="logout.php" onclick="logout()"><i class="fa-solid fa-right-from-bracket mx-2"></i>Logout</a>
+                </li>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <br>
+                <li class="nav-item">
+                    <p>Welcome, <?php echo $user_name; ?></p>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!-- /#sidebar -->
+
+    <!-- Page Content -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <button type="button" id="sidebarCollapse" class="btn btn-dark" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="navbar-brand mx-auto">Dashboard</span>
+            </div>
+        </nav>
+
+        <!-- Dynamic Content Sections -->
+        <div id="main-content">
+            <!-- Dashboard Content -->
+            <div id="dashboard-content" class="content active container-fluid px-4">
+                <div class="row g-3 my-2">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card1">
+                            <div>
+                                <h3 class="fs-2">63</h3>
+                                <p class="fs-5">Total Attendance</p>
+                            </div>
+                            <i class="fas fa-clipboard-user fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card2">
+                            <div>
+                                <h3 class="fs-2">52</h3>
+                                <p class="fs-5">Student Present</p>
+                            </div>
+                            <i class="fas fa-school fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card3">
+                            <div>
+                                <h3 class="fs-2">20</h3>
+                                <p class="fs-5">Student Absent</p>
+                            </div>
+                            <i class="fas fa-walking fs-1 l p-4"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 my-2">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                Active Sessions
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                    <?php
+date_default_timezone_set('africa/lagos'); // Set the appropriate timezone
+
+$current_time = new DateTime();
+
+// Fetch the current active session
+$sql_fetch_current_session = "SELECT * FROM sessions WHERE end_time > NOW() ORDER BY start_time DESC LIMIT 1";
+$result_current_session = mysqli_query($conn_attendance, $sql_fetch_current_session);
+
+if ($result_current_session && mysqli_num_rows($result_current_session) > 0) {
+    $current_session = mysqli_fetch_assoc($result_current_session);
+    $session_id = $current_session['session_id'];
+    $session_name = $current_session['session_name'];
+    $start_time = $current_session['start_time'];
+    $end_time = $current_session['end_time'];
+
+    // Fetch the attendees for the current session
+    $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+    $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+    echo "<thead>
+        <tr>
+            <th scope='col'>Session Name</th>
+            <th scope='col'>Start Time</th>
+            <th scope='col'>End Time</th>
+            <th scope='col'>Attendees</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>{$session_name}</td>
+            <td>{$start_time}</td>
+            <td>{$end_time}</td>
+            <td>";
+
+    if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+        while ($row = mysqli_fetch_assoc($result_attendees)) {
+            echo $row['rfid_tag'] . "<br>";
+        }
+    } else {
+        echo "No attendees found.";
+    }
+
+    echo "</td>
+        </tr>
+    </tbody>";
+} else {
+    echo "<tbody><tr><td colspan='4'>No active sessions.</td></tr></tbody>";
+}
+?>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Session Content -->
+            <div id="create-session-content" class="content container-fluid px-4" style="display: none;">
+                <h2>Create Session</h2>
+                <form method="post" action="dashboard.php">
+                    <div class="form-group">
+                        <label for="session_name">Session Name</label>
+                        <input type="text" class="form-control" id="session_name" name="session_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="start_time">Start Time</label>
+                        <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="end_time">End Time</label>
+                        <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">Create Session</button>
+                </form>
+            </div>
+
+            <!-- History Content -->
+            <div id="history-content" class="content container-fluid px-4" style="display: none;">
+                <h2>History</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th scope="col">Session Name</th>
+                                <th scope="col">Start Time</th>
+                                <th scope="col">End Time</th>
+                                <th scope="col">Attendees</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            // Fetch session history
+                            $sql_fetch_history = "SELECT * FROM sessions ORDER BY start_time DESC";
+                            $result_history = mysqli_query($conn_attendance, $sql_fetch_history);
+
+                            if ($result_history && mysqli_num_rows($result_history) > 0) {
+                                while ($session = mysqli_fetch_assoc($result_history)) {
+                                    $session_id = $session['session_id'];
+                                    $session_name = $session['session_name'];
+                                    $start_time = $session['start_time'];
+                                    $end_time = $session['end_time'];
+
+                                    // Fetch attendees for each session
+                                    $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+                                    $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+                                    echo "<tr>
+                                            <td>{$session_name}</td>
+                                            <td>{$start_time}</td>
+                                            <td>{$end_time}</td>
+                                            <td>";
+
+                                    if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+                                        while ($attendee = mysqli_fetch_assoc($result_attendees)) {
+                                            echo $attendee['rfid_tag'] . "<br>";
+                                        }
+                                    } else {
+                                        echo "No attendees found.";
+                                    }
+
+                                    echo "</td>
+                                        </tr>";
+                                }
+                            } else {
+                                echo "<tr><td colspan='4'>No session history found.</td></tr>";
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Profile Content -->
+            <div id="profile-content" class="content container-fluid px-4" style="display: none;">
+                <h2>Profile</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <p><strong>Name:</strong> <?php echo $user_name; ?></p>
+                        <p><strong>Email:</strong> <?php echo $user_email; ?></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById("sidebar").classList.toggle("collapsed");
+            document.getElementById("content").classList.toggle("expanded");
+        }
+
+        function showDashboard() {
+            hideAllContent();
+            document.getElementById("dashboard-content").style.display = "block";
+        }
+
+        function showCreateSession() {
+            hideAllContent();
+            document.getElementById("create-session-content").style.display = "block";
+        }
+
+        function showHistory() {
+            hideAllContent();
+            document.getElementById("history-content").style.display = "block";
+        }
+
+        function showProfile() {
+            hideAllContent();
+            document.getElementById("profile-content").style.display = "block";
+        }
+
+        function hideAllContent() {
+            document.getElementById("dashboard-content").style.display = "none";
+            document.getElementById("create-session-content").style.display = "none";
+            document.getElementById("history-content").style.display = "none";
+            document.getElementById("profile-content").style.display = "none";
+        }
+    </script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+all good but bad UI 
+
+
+
+<?php
+session_start();
+include 'database.php';
+
+$user_id = $_SESSION['user_id']; // Assuming user_id is stored in session after login
+
+// Fetch user profile data
+// Retrieve user information based on user_id
+$user_id = $_SESSION["user_id"];
+$sql_user = "SELECT * FROM users WHERE id = $user_id";
+$result_user = mysqli_query($conn_login, $sql_user);
+
+if ($result_user) {
+    $user = mysqli_fetch_assoc($result_user);
+    if ($user) {
+        $user_name = $user['full_name'];
+        $user_email = $user['email'];
+    } else {
+        echo "User not found.";
+    }
+} else {
+    echo "Error: " . mysqli_error($conn_login);
+}
+
+// $user_name = $_SESSION['full_name'];
+// $user_email = $_SESSION['email'];
+
+
+// Fetch current active session for the logged-in user
+$sql_fetch_current_session = "SELECT * FROM sessions WHERE NOW() BETWEEN start_time AND end_time AND user_id = '$user_id' ORDER BY start_time DESC LIMIT 1";
+$result_current_session = mysqli_query($conn_attendance, $sql_fetch_current_session);
+
+// Fetch session history for the logged-in user
+$sql_fetch_history = "SELECT * FROM sessions WHERE user_id = '$user_id' ORDER BY start_time DESC";
+$result_history = mysqli_query($conn_attendance, $sql_fetch_history);
+
+// Fetch total number of students
+$sql_total_students = "SELECT COUNT(DISTINCT rfid_tag) as total_students FROM attendance";
+$result_total_students = mysqli_query($conn_attendance, $sql_total_students);
+$total_students = mysqli_fetch_assoc($result_total_students)['total_students'];
+
+// Fetch total number of history sessions for the logged-in user
+$sql_total_history_sessions = "SELECT COUNT(*) as total_history_sessions FROM sessions WHERE user_id = '$user_id'";
+$result_total_history_sessions = mysqli_query($conn_attendance, $sql_total_history_sessions);
+$total_history_sessions = mysqli_fetch_assoc($result_total_history_sessions)['total_history_sessions'];
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        /* Add your custom styles here */
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="sidebar-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="showDashboard()">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showCreateSession()">
+                                <i class="fas fa-plus"></i>
+                                Create Session
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showHistory()">
+                                <i class="fas fa-history"></i>
+                                History
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showProfile()">
+                                <i class="fas fa-user"></i>
+                                Profile
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                        <li class="nav-item">
+                    <a class="nav-link" href="logout.php" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i>Logout</a>
+                </li>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </nav>
+
+            
+
+            <div id="content" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                <div class="custom-card mt-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Students</h5>
+                            <p class="card-text"><?php echo $total_students; ?></p>
+                        </div>
+                    </div>
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total History Sessions</h5>
+                            <p class="card-text"><?php echo $total_history_sessions; ?></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content -->
+                <div id="dashboard-content" class="content container-fluid px-4">
+                    <h2>Active Session</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <?php
+                            if ($result_current_session && mysqli_num_rows($result_current_session) > 0) {
+                                $current_session = mysqli_fetch_assoc($result_current_session);
+                                $session_id = $current_session['session_id'];
+                                $session_name = $current_session['session_name'];
+                                $start_time = $current_session['start_time'];
+                                $end_time = $current_session['end_time'];
+
+                                // Fetch the attendees for the current session
+                                $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+                                $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+                                echo "<thead>
+                                    <tr>
+                                        <th scope='col'>Session Name</th>
+                                        <th scope='col'>Start Time</th>
+                                        <th scope='col'>End Time</th>
+                                        <th scope='col'>Attendees</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>{$session_name}</td>
+                                        <td>{$start_time}</td>
+                                        <td>{$end_time}</td>
+                                        <td>";
+
+                                if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+                                    while ($row = mysqli_fetch_assoc($result_attendees)) {
+                                        echo $row['rfid_tag'] . "<br>";
+                                    }
+                                } else {
+                                    echo "No attendees found.";
+                                }
+
+                                echo "</td>
+                                    </tr>
+                                </tbody>";
+                            } else {
+                                echo "<tbody><tr><td colspan='4'>No active sessions.</td></tr></tbody>";
+                            }
+                            ?>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Create Session Content -->
+                <div id="create-session-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>Create Session</h2>
+                    <form method="post" action="create_session.php">
+                        <div class="form-group">
+                            <label for="session_name">Session Name</label>
+                            <input type="text" class="form-control" id="session_name" name="session_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_time">Start Time</label>
+                            <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="end_time">End Time</label>
+                            <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Create Session</button>
+                    </form>
+                </div>
+
+                <!-- History Content -->
+                <div id="history-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>History</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Session Name</th>
+                                    <th scope="col">Start Time</th>
+                                    <th scope="col">End Time</th>
+                                    <th scope="col">Attendees</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                if ($result_history && mysqli_num_rows($result_history) > 0) {
+                                    while ($session = mysqli_fetch_assoc($result_history)) {
+                                        $session_id = $session['session_id'];
+                                        $session_name = $session['session_name'];
+                                        $start_time = $session['start_time'];
+                                        $end_time = $session['end_time'];
+
+                                        // Fetch the attendees for the session
+                                        $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+                                        $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+                                        echo "<tr>
+                                            <td>{$session_name}</td>
+                                            <td>{$start_time}</td>
+                                            <td>{$end_time}</td>
+                                            <td>";
+
+                                        if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+                                            while ($row = mysqli_fetch_assoc($result_attendees)) {
+                                                echo $row['rfid_tag'] . "<br>";
+                                            }
+                                        } else {
+                                            echo "No attendees found.";
+                                        }
+
+                                        echo "</td>
+                                            </tr>";
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='4'>No history sessions found.</td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Profile Content -->
+                <div id="profile-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>Profile</h2>
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Name</h5>
+                            <p class="card-text"><?php echo $user_name; ?></p>
+                            <h5 class="card-title">Email</h5>
+                            <p class="card-text"><?php echo $user_email; ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showDashboard() {
+            document.getElementById('dashboard-content').style.display = 'block';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showCreateSession() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'block';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showHistory() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'block';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showProfile() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'block';
+        }
+
+        // Initialize dashboard
+        showDashboard();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+perfect but reg issues 
+
+
+<?php
+session_start();
+include 'database.php';
+
+
+$user_id = $_SESSION['user_id']; // Assuming user_id is stored in session after login
+
+// Fetch user profile data
+// Retrieve user information based on user_id
+$user_id = $_SESSION["user_id"];
+$sql_user = "SELECT * FROM users WHERE id = $user_id";
+$result_user = mysqli_query($conn_login, $sql_user);
+
+if ($result_user) {
+    $user = mysqli_fetch_assoc($result_user);
+    if ($user) {
+        $user_name = $user['full_name'];
+        $user_email = $user['email'];
+    } else {
+        echo "User not found.";
+    }
+} else {
+    echo "Error: " . mysqli_error($conn_login);
+}
+
+// Fetch current active session for the logged-in user
+$sql_fetch_current_session = "SELECT * FROM sessions WHERE NOW() BETWEEN start_time AND end_time AND user_id = '$user_id' ORDER BY start_time DESC LIMIT 1";
+$result_current_session = mysqli_query($conn_attendance, $sql_fetch_current_session);
+
+// Fetch session history for the logged-in user
+$sql_fetch_history = "SELECT * FROM sessions WHERE user_id = '$user_id' ORDER BY start_time DESC";
+$result_history = mysqli_query($conn_attendance, $sql_fetch_history);
+
+// Fetch total number of students
+$sql_total_students = "SELECT COUNT(DISTINCT rfid_tag) as total_students FROM attendance";
+$result_total_students = mysqli_query($conn_attendance, $sql_total_students);
+$total_students = mysqli_fetch_assoc($result_total_students)['total_students'];
+
+// Fetch total number of history sessions for the logged-in user
+$sql_total_history_sessions = "SELECT COUNT(*) as total_history_sessions FROM sessions WHERE user_id = '$user_id'";
+$result_total_history_sessions = mysqli_query($conn_attendance, $sql_total_history_sessions);
+$total_history_sessions = mysqli_fetch_assoc($result_total_history_sessions)['total_history_sessions'];
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .sidebar {
+            min-height: 100vh;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .sidebar-sticky {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: 0.5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .nav-link:hover {
+            color: #007bff;
+        }
+
+        .custom-card {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .card {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 10px;
+            margin: 10px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .content {
+            margin-top: 20px;
+        }
+
+        table {
+            margin-top: 20px;
+        }
+
+        th, td {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="sidebar-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="showDashboard()">
+                                <i class="fas fa-tachometer-alt"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showCreateSession()">
+                                <i class="fas fa-plus"></i>
+                                Create Session
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showHistory()">
+                                <i class="fas fa-history"></i>
+                                History
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showProfile()">
+                                <i class="fas fa-user"></i>
+                                Profile
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="logout.php" onclick="logout()">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div id="content" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                <div class="custom-card mt-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Students</h5>
+                            <p class="card-text"><?php echo $total_students; ?></p>
+                        </div>
+                    </div>
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total History Sessions</h5>
+                            <p class="card-text"><?php echo $total_history_sessions; ?></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content -->
+                <div id="dashboard-content" class="content container-fluid px-4">
+                    <h2>Active Session</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <?php
+                            if ($result_current_session && mysqli_num_rows($result_current_session) > 0) {
+                                $current_session = mysqli_fetch_assoc($result_current_session);
+                                $session_id = $current_session['session_id'];
+                                $session_name = $current_session['session_name'];
+                                $start_time = $current_session['start_time'];
+                                $end_time = $current_session['end_time'];
+
+                                // Fetch the attendees for the current session
+                                $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+                                $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+                                echo "<thead>
+                                    <tr>
+                                        <th scope='col'>Session Name</th>
+                                        <th scope='col'>Start Time</th>
+                                        <th scope='col'>End Time</th>
+                                        <th scope='col'>Attendees</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>{$session_name}</td>
+                                        <td>{$start_time}</td>
+                                        <td>{$end_time}</td>
+                                        <td>";
+
+                                if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+                                    while ($row = mysqli_fetch_assoc($result_attendees)) {
+                                        echo $row['rfid_tag'] . "<br>";
+                                    }
+                                } else {
+                                    echo "No attendees found.";
+                                }
+
+                                echo "</td>
+                                    </tr>
+                                </tbody>";
+                            } else {
+                                echo "<tbody><tr><td colspan='4'>No active sessions.</td></tr></tbody>";
+                            }
+                            ?>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Create Session Content -->
+                <div id="create-session-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>Create Session</h2>
+                    <form method="post" action="create_session.php">
+                        <div class="form-group">
+                            <label for="session_name">Session Name</label>
+                            <input type="text" class="form-control" id="session_name" name="session_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_time">Start Time</label>
+                            <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="end_time">End Time</label>
+                            <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Create Session</button>
+                    </form>
+                </div>
+
+                <!-- History Content -->
+                <div id="history-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>History</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Session Name</th>
+                                    <th scope="col">Start Time</th>
+                                    <th scope="col">End Time</th>
+                                    <th scope="col">Attendees</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                if ($result_history && mysqli_num_rows($result_history) > 0) {
+                                    while ($row = mysqli_fetch_assoc($result_history)) {
+                                        $session_id = $row['session_id'];
+                                        $session_name = $row['session_name'];
+                                        $start_time = $row['start_time'];
+                                        $end_time = $row['end_time'];
+
+                                        // Fetch attendees for the session
+                                        $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+                                        $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+                                        echo "<tr>
+                                            <td>{$session_name}</td>
+                                            <td>{$start_time}</td>
+                                            <td>{$end_time}</td>
+                                            <td>";
+
+                                        if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+                                            while ($attendee = mysqli_fetch_assoc($result_attendees)) {
+                                                echo $attendee['rfid_tag'] . "<br>";
+                                            }
+                                        } else {
+                                            echo "No attendees found.";
+                                        }
+
+                                        echo "</td>
+                                        </tr>";
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='4'>No session history found.</td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Profile Content -->
+                <div id="profile-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>Profile</h2>
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Name: <?php echo $user_name; ?></h5>
+                            <p class="card-text">Email: <?php echo $user_email; ?></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showDashboard() {
+            document.getElementById('dashboard-content').style.display = 'block';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showCreateSession() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'block';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showHistory() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'block';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showProfile() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'block';
+        }
+
+        function logout() {
+            // Add any necessary logout logic here
+        }
+    </script>
+</body>
+</html>
+
+
+
+
+
+reg.php
+
+
+<?php
+session_start();
+
+if (isset($_SESSION["user"])) {
+    header("location: dashboard.php");
+    exit;
+}
+
+if (isset($_POST["submit"])) {
+    // Database connection
+    require_once "database.php";
+
+    // Sanitize and validate inputs
+    $fullname = mysqli_real_escape_string($conn_login, $_POST["fullname"]);
+    $email = mysqli_real_escape_string($conn_login, $_POST["email"]);
+    $password = mysqli_real_escape_string($conn_login, $_POST["password"]);
+    $passwordRepeat = mysqli_real_escape_string($conn_login, $_POST["repeat_password"]);
+
+    // Hash password
+    $passwordhash = password_hash($password, PASSWORD_DEFAULT);
+
+    // Validation and error handling
+    $errors = array();
+
+    if (empty($fullname) || empty($email) || empty($password) || empty($passwordRepeat)) {
+        array_push($errors, "All fields are required");
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        array_push($errors, "Email is not valid");
+    }
+    if (strlen($password) < 8) {
+        array_push($errors, "Password must be at least 8 characters long");
+    }
+    if ($password !== $passwordRepeat) {
+        array_push($errors, "Passwords do not match");
+    }
+
+    // Check if email already exists
+    $sql_check_email = "SELECT * FROM users WHERE email = '$email'";
+    $result_check_email = mysqli_query($conn_login, $sql_check_email);
+
+    if (mysqli_num_rows($result_check_email) > 0) {
+        array_push($errors, "Email already exists");
+    }
+
+    // If no errors, insert user into database
+    if (count($errors) === 0) {
+        $sql_insert_user = "INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)";
+        $stmt = mysqli_stmt_init($conn_login);
+        if (mysqli_stmt_prepare($stmt, $sql_insert_user)) {
+            mysqli_stmt_bind_param($stmt, "sss", $fullname, $email, $passwordhash);
+            mysqli_stmt_execute($stmt);
+            mysqli_stmt_close($stmt);
+
+            // Store user data in session
+            $_SESSION["user"] = $email; // Store user's email in session
+            $_SESSION["fullname"] = $fullname; // Store user's full name in session
+
+            // Redirect to dashboard after successful registration
+            header("location: dashboard.php");
+            exit;
+        } else {
+            die("Error: Unable to prepare statement");
+        }
+    }
+
+    // Close database connection
+    mysqli_close($conn_login);
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+    <style>
+        .grid-background {
+         
+
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         z-index: -1; /* Ensure grid is behind content */
+         background-size: 200px 200px;
+         background-color:rgb(244,244,245);
+         background-image: linear-gradient(to right, rgba(204, 204, 204, 0.19) 2px, transparent 1px),
+                           linear-gradient(to bottom, rgba(204, 204, 204, 0.163) 2px, transparent 1px);
+
+                           
+     
+     }
+     .tt{
+        color:black;
+    font-size: 12px;
+        
+     }
+     .tt a{
+        color:black;
+        text-decoration: none;
+
+     }
+        
+    </style>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - TrackWave</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="signup.css">
+</head>
+<body class="grid-background ">
+    <div class="sign-up" style=" background-color:rgb(244,244,245); border:1px solid gray; box-shadow: rgba(10, 10, 92, 0)0px 7px 29px 0px;">
+        <h1>Sign Up</h1>
+        <?php
+        if (!empty($errors)) {
+            foreach ($errors as $error) {
+                echo "<div class='alert alert-danger'>$error</div>";
+            }
+        }
+        ?>
+        <form action="registration.php" method="post">
+            <div class="form-group">
+                <input type="text" class="form-control" name="fullname" placeholder="Full Name" value="<?php if(isset($_POST['fullname'])) echo $_POST['fullname']; ?>">
+            </div>
+            <div class="form-group">
+                <input type="email" class="form-control" name="email" placeholder="Email" value="<?php if(isset($_POST['email'])) echo $_POST['email']; ?>">
+            </div>
+            <div class="form-group"> 
+                <input type="password" class="form-control" name="password" placeholder="Password">
+            </div>
+            <div class="form-group">
+                <input type="password" class="form-control" name="repeat_password" placeholder="Repeat Password">
+            </div>
+            <div class="form-btn">
+                <input type="submit" class="btn btn-primary" value="Register" name="submit" style="background-color:black; border:none;">
+            </div>
+        </form>
+        <div class="tt">Already registered? <a href="login.php">Login</a></div>
+        <div class="tt"><p>Go <a href="index.html">home </a></p> </div>
+
+    </div>
+</body>
+</html>
+
+
+
+
+admin perfect 
+
+
+
+<?php
+// Database connection for login_register database (users)
+$hostName = "localhost";
+$dbUser = "root";
+$dbPassword = "";
+$dbName = "login_register";
+
+$conn = mysqli_connect($hostName, $dbUser, $dbPassword, $dbName);
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+
+// Database connection for student_attendance database
+$dbAttendanceName = "student_attendance";
+$conn_attendance = mysqli_connect($hostName, $dbUser, $dbPassword, $dbAttendanceName);
+if (!$conn_attendance) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+
+// Fetching student attendance data
+$sql_students = "SELECT rfid_tag, COUNT(*) as attendance_count 
+                 FROM attendance
+                 GROUP BY rfid_tag";
+
+$result_students = mysqli_query($conn_attendance, $sql_students);
+if (!$result_students) {
+    die("Error fetching students: " . mysqli_error($conn_attendance));
+}
+
+// Fetching all users from login_register database
+$sql_users = "SELECT * FROM users";
+$result_users = mysqli_query($conn, $sql_users);
+if (!$result_users) {
+    die("Error fetching users: " . mysqli_error($conn));
+}
+
+// Count number of students
+$num_students = mysqli_num_rows($result_students);
+
+// Count number of teachers (users)
+$num_users = mysqli_num_rows($result_users);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            height: 100vh;
+            padding-top: 20px;
+        }
+        .sidebar .list-group-item {
+            border: none;
+        }
+        .sidebar .list-group-item.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .content {
+            padding: 20px;
+        }
+    </style>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_TRACKING_ID"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'YOUR_TRACKING_ID');
+    </script>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 bg-light sidebar">
+            <div class="list-group">
+                <a href="#students" class="list-group-item list-group-item-action active" data-bs-toggle="pill" role="tab">Students</a>
+                <a href="#users" class="list-group-item list-group-item-action" data-bs-toggle="pill" role="tab">Users</a>
+                <a href="#settings" class="list-group-item list-group-item-action" data-bs-toggle="pill" role="tab">Settings</a>
+                <a href="#reports" class="list-group-item list-group-item-action" data-bs-toggle="pill" role="tab">Reports</a>
+                <a href="logout.php" class="list-group-item list-group-item-action">Logout</a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9 col-lg-10 content">
+            <div class="tab-content">
+                <!-- Students Tab -->
+                <div id="students" class="tab-pane fade show active">
+                    <h2>Students Attendance</h2>
+                    <input type="text" id="studentSearch" class="form-control mb-3" placeholder="Search student...">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>RFID Tag</th>
+                                <th>Attendance Count</th>
+                                <th>Attendance Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            while ($row_students = mysqli_fetch_assoc($result_students)) {
+                                $rfid_tag = $row_students['rfid_tag'];
+                                $attendance_count = $row_students['attendance_count'];
+                                // Calculate attendance percentage (dummy calculation)
+                                $attendance_percentage = ($attendance_count > 0) ? ($attendance_count / 50) * 100 : 0;
+                                echo "<tr>";
+                                echo "<td>$rfid_tag</td>";
+                                echo "<td>$attendance_count</td>";
+                                echo "<td>$attendance_percentage%</td>";
+                                echo "</tr>";
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Users Tab -->
+                <div id="users" class="tab-pane fade">
+                    <h2>System Users</h2>
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            while ($row_users = mysqli_fetch_assoc($result_users)) {
+                                $user_id = $row_users['id'];
+                                $user_fullname = $row_users['full_name'];
+                                $user_email = $row_users['email'];
+                                echo "<tr>";
+                                echo "<td>$user_id</td>";
+                                echo "<td>$user_fullname</td>";
+                                echo "<td>$user_email</td>";
+                                echo "<td><a href='user_profile.php?id=$user_id'>View Profile</a> | <a href='delete_user.php'>Delete</a></td>";
+
+                                echo "</tr>";
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings" class="tab-pane fade">
+                    <h2>Settings</h2>
+                    <div id="settings" class="tab-pane fade">
+    <h2>Settings</h2>
+    <h2>dfggg</h2>
+    <div class="accordion" id="settingsAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingProfile">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProfile" aria-expanded="true" aria-controls="collapseProfile">
+                    Profile Settings
+                </button>
+            </h2>
+            <div id="collapseProfile" class="accordion-collapse collapse show" aria-labelledby="headingProfile" data-bs-parent="#settingsAccordion">
+                <div class="accordion-body">
+                    <!-- Profile settings content -->
+                </div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingSystem">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSystem" aria-expanded="false" aria-controls="collapseSystem">
+                    System Settings
+                </button>
+            </h2>
+            <div id="collapseSystem" class="accordion-collapse collapse" aria-labelledby="headingSystem" data-bs-parent="#settingsAccordion">
+                <div class="accordion-body">
+                    
+                    <!-- System settings content -->
+                </div>
+            </div>
+        </div>
+        <!-- Additional settings sections -->
+    </div>
+</div>
+
+                </div>
+
+                <!-- Reports Tab -->
+                <div id="reports" class="tab-pane fade">
+                    <h2>Reports</h2>
+                    <canvas id="userChart" width="400" height="200"></canvas>
+                    <script>
+                        const ctx = document.getElementById('userChart').getContext('2d');
+                        const userChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Students', 'Teachers'],
+                                datasets: [{
+                                    label: '# of Users',
+                                    data: [<?php echo $num_students; ?>, <?php echo $num_users; ?>],
+                                    backgroundColor: [
+                                        'rgba(54, 162, 235, 0.2)',
+                                        'rgba(255, 99, 132, 0.2)'
+                                    ],
+                                    borderColor: [
+                                        'rgba(54, 162, 235, 1)',
+                                        'rgba(255, 99, 132, 1)'
+                                    ],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // JavaScript for student search functionality
+    document.getElementById('studentSearch').addEventListener('input', function () {
+        const searchText = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#students tbody tr');
+        rows.forEach(row => {
+            const rfidTag = row.children[0].textContent.toLowerCase();
+            row.style.display = rfidTag.includes(searchText) ? '' : 'none';
+        });
+    });
+</script>
+
+</body>
+</html>
+
+<?php
+// Close database connections
+mysqli_close($conn);
+mysqli_close($conn_attendance);
+?>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+perfect code dashboard.php
+
+
+<?php
+session_start();
+include 'database.php';
+
+
+$user_id = $_SESSION['user_id']; // Assuming user_id is stored in session after login
+
+// Fetch user profile data
+// Retrieve user information based on user_id
+$user_id = $_SESSION["user_id"];
+$sql_user = "SELECT * FROM users WHERE id = $user_id";
+$result_user = mysqli_query($conn_login, $sql_user);
+
+if ($result_user) {
+    $user = mysqli_fetch_assoc($result_user);
+    if ($user) {
+        $user_name = $user['full_name'];
+        $user_email = $user['email'];
+    } else {
+        echo "User not found.";
+    }
+} else {
+    echo "Error: " . mysqli_error($conn_login);
+}
+
+// Fetch current active session for the logged-in user
+$sql_fetch_current_session = "SELECT * FROM sessions WHERE NOW() BETWEEN start_time AND end_time AND user_id = '$user_id' ORDER BY start_time DESC LIMIT 1";
+$result_current_session = mysqli_query($conn_attendance, $sql_fetch_current_session);
+
+// Fetch session history for the logged-in user
+$sql_fetch_history = "SELECT * FROM sessions WHERE user_id = '$user_id' ORDER BY start_time DESC";
+$result_history = mysqli_query($conn_attendance, $sql_fetch_history);
+
+// Fetch total number of students
+$sql_total_students = "SELECT COUNT(DISTINCT rfid_tag) as total_students FROM attendance";
+$result_total_students = mysqli_query($conn_attendance, $sql_total_students);
+$total_students = mysqli_fetch_assoc($result_total_students)['total_students'];
+
+// Fetch total number of history sessions for the logged-in user
+$sql_total_history_sessions = "SELECT COUNT(*) as total_history_sessions FROM sessions WHERE user_id = '$user_id'";
+$result_total_history_sessions = mysqli_query($conn_attendance, $sql_total_history_sessions);
+$total_history_sessions = mysqli_fetch_assoc($result_total_history_sessions)['total_history_sessions'];
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://kit.fontawesome.com/da3601086d.js" crossorigin="anonymous"></script>
+    <link rel="preload" href="MADEOuterSansAlt-Light.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Black.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Bold.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Thin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSans-Medium.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSans-Light.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Medium.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Thin.woff2" as="font" type="font/woff2" crossorigin>
+    <style>
+        body {
+            /* font-family: 'Arial', sans-serif; */
+            background-color: #ffffff;
+            font-size: 1rem;
+           
+            font-family: 'MADE Outer Sans';
+            font-weight: 100;
+        }
+
+        .sidebar {
+            min-height: 100vh;
+            border-right: 1px solid #dee2e6;
+           
+
+            
+        }
+
+        .sidebar-sticky {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: 0.5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .nav-link:hover {
+            color: gray;
+        }
+
+      
+        .custom-card {
+            min-height: 70px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-card i {
+            font-size: 2rem;
+            color: #6c757d;
+        }
+
+
+        .card {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 10px;
+            margin: 10px;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .content {
+            margin-top: 20px;
+        }
+
+        table {
+            margin-top: 20px;
+        }
+
+        th, td {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="sidebar-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="showDashboard()">
+                            <i class="fa-solid fa-house"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showCreateSession()">
+                                <i class="fas fa-plus"></i>
+                                Create Session
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showHistory()">
+                                <i class="fas fa-history"></i>
+                                History
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showProfile()">
+                                <i class="fas fa-user"></i>
+                                Profile
+                            </a>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showSearch()">
+                                <i class="fas fa-user"></i>
+                                search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="logout.php" onclick="logout()">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div id="content" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+                <div class="custom-card mt-4">
+                    <!-- <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Students</h5>
+                            <p class="card-text"></p>
+                        </div>
+                    </div> -->
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card2">
+                            <div>
+                                <h3 class="fs-2"><?php echo $total_students; ?></h3>
+                                <p class="fs-5">Total Students</p>
+                            </div>
+                            <i class="fa-solid fa-graduation-cap fs-1 l p-4"></i>
+                    
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card2">
+                            <div>
+                                <h3 class="fs-2"><?php echo $total_history_sessions; ?></h3>
+                                <p class="fs-5"> Sessions Created</p>
+                            </div>
+                            <i class="fa-solid fa-square-plus fs-1 l p-4"></i>
+                            
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-white shadow-sm d-flex justify-content-around align-items-center rounded custom-card custom-card2">
+                            <div>
+                                <h3 class="fs-2"><?php echo $total_history_sessions; ?></h3>
+                                <p class="fs-5"> History</p>
+                            </div>
+                            <i class="fa-solid fa-clock-rotate-left fs-1 l p-4"></i>
+                            <!-- <i class="fas fa-school fs-1 l p-4"></i> -->
+                        </div>
+                    </div>
+                    <!-- <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Total History Sessions</h5>
+                            <p class="card-text"></p>
+                        </div>
+                    </div> -->
+                </div>
+
+                <!-- Dashboard Content -->
+                <div id="dashboard-content" class="content container-fluid px-4">
+                    <h2>Active Session</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <?php
+                            if ($result_current_session && mysqli_num_rows($result_current_session) > 0) {
+                                $current_session = mysqli_fetch_assoc($result_current_session);
+                                $session_id = $current_session['session_id'];
+                                $session_name = $current_session['session_name'];
+                                $start_time = $current_session['start_time'];
+                                $end_time = $current_session['end_time'];
+
+                                // Fetch the attendees for the current session
+                                $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+                                $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+                                echo "<thead>
+                                    <tr>
+                                        <th scope='col'>Session Name</th>
+                                        <th scope='col'>Start Time</th>
+                                        <th scope='col'>End Time</th>
+                                        <th scope='col'>Attendees</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>{$session_name}</td>
+                                        <td>{$start_time}</td>
+                                        <td>{$end_time}</td>
+                                        <td>";
+
+                                if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+                                    while ($row = mysqli_fetch_assoc($result_attendees)) {
+                                        echo $row['rfid_tag'] . "<br>";
+                                    }
+                                } else {
+                                    echo "No attendees found.";
+                                }
+
+                                echo "</td>
+                                    </tr>
+                                </tbody>";
+                            } else {
+                                echo "<tbody><tr><td colspan='4'>No active sessions, create one.</td></tr></tbody>";
+                            }
+                            ?>
+                        </table>
+                    </div>
+                </div>
+             
+
+
+                <!-- Create Session Content -->
+                <div id="create-session-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>Create Session</h2>
+                    <form method="post" action="create_session.php">
+                        <div class="form-group">
+                            <label for="session_name">Session Name</label>
+                            <input type="text" class="form-control" id="session_name" name="session_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_time">Start Time</label>
+                            <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="end_time">End Time</label>
+                            <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3" >Create Session</button>
+                    </form>
+                </div>
+
+                <!-- History Content -->
+                <div id="history-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>History</h2>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Session Name</th>
+                                    <th scope="col">Start Time</th>
+                                    <th scope="col">End Time</th>
+                                    <th scope="col">Attendees</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                if ($result_history && mysqli_num_rows($result_history) > 0) {
+                                    while ($row = mysqli_fetch_assoc($result_history)) {
+                                        $session_id = $row['session_id'];
+                                        $session_name = $row['session_name'];
+                                        $start_time = $row['start_time'];
+                                        $end_time = $row['end_time'];
+
+                                        // Fetch attendees for the session
+                                        $sql_fetch_attendees = "SELECT * FROM attendance WHERE timestamp BETWEEN '$start_time' AND '$end_time'";
+                                        $result_attendees = mysqli_query($conn_attendance, $sql_fetch_attendees);
+
+                                        echo "<tr>
+                                            <td>{$session_name}</td>
+                                            <td>{$start_time}</td>
+                                            <td>{$end_time}</td>
+                                            <td>";
+
+                                        if ($result_attendees && mysqli_num_rows($result_attendees) > 0) {
+                                            while ($attendee = mysqli_fetch_assoc($result_attendees)) {
+                                                echo $attendee['rfid_tag'] . "<br>";
+                                            }
+                                        } else {
+                                            echo "No attendees present .";
+                                        }
+
+                                        echo "</td>
+                                        </tr>";
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='4'>No session history found.</td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+               
+                
+
+                <!-- Profile Content -->
+                <div id="profile-content" class="content container-fluid px-4" style="display: none;">
+                    <h2>Profile</h2>
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Name: <?php echo $user_name; ?></h5>
+                            <p class="card-text">Email: <?php echo $user_email; ?></p>
+                        </div>
+                    </div>
+                </div>
+               
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    <script>
+    // JavaScript for student search functionality
+    const studentSearch = document.getElementById('studentSearch');
+    studentSearch.addEventListener('input', function () {
+        const searchText = this.value.toLowerCase();
+        const studentsTable = document.querySelector('#students table tbody');
+        const rows = studentsTable.getElementsByTagName('tr');
+        Array.from(rows).forEach(function (row) {
+            const rfidTag = row.getElementsByTagName('td')[0].textContent.toLowerCase();
+            if (rfidTag.includes(searchText)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+    <script>
+        function showDashboard() {
+            document.getElementById('dashboard-content').style.display = 'block';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showCreateSession() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'block';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showHistory() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'block';
+            document.getElementById('profile-content').style.display = 'none';
+        }
+
+        function showProfile() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('profile-content').style.display = 'block';
+        }
+        function showSearch() {
+            document.getElementById('dashboard-content').style.display = 'none';
+            document.getElementById('create-session-content').style.display = 'none';
+            document.getElementById('history-content').style.display = 'none';
+            document.getElementById('search-content').style.display = 'block';
+        }
+
+        function logout() {
+            // Add any necessary logout logic here
+        }
+    </script>
+</body>
+</html>

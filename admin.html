@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="MADEOuterSansAlt-Light.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Black.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Bold.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Thin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSans-Medium.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSans-Light.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Medium.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Thin.woff2" as="font" type="font/woff2" crossorigin>
+    <title>Admin Landing Page</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .grid-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-size: 200px 200px;
+            background-color: rgb(244,244,245);
+            background-image: linear-gradient(to right, rgba(204, 204, 204, 0.19) 2px, transparent 1px),
+                              linear-gradient(to bottom, rgba(204, 204, 204, 0.163) 2px, transparent 1px);
+        }
+        .content {
+            position: relative;
+            z-index: 1;
+            padding: 20px;
+        }
+        body {
+            color: #262525;
+            font-family: 'Arial', sans-serif;
+        }
+        .hero-section {
+            text-align: center;
+            padding: 100px 20px;
+        }
+        .hero-section h1 {
+            font-size: 2.5rem;
+            font-family: 'MADE Outer Sans Alt';
+            font-weight: bold;
+        }
+        .hero-section p {
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+            font-family: 'MADE Outer Sans';
+            font-weight: 200;
+        }
+        .btn-custom {
+            background-color: rgb(9,9,11);
+            color: #f3f3f3;
+            border-radius: 5px;
+            padding: 10px 20px;
+        }
+        .navbar-custom {
+            background-color: transparent;
+        }
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: rgb(9,9,11);
+        }
+        .features-section {
+            padding: 60px 20px;
+        }
+        .card-custom {
+            border: 1px solid linear-gradient(to bottom right, rgb(255, 255, 255), rgb(244, 244, 245));
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .card-custom img {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        .card-custom .card-body {
+            padding: 20px;
+        }
+        .navbar {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        .navbar-brand {
+            margin-right: 1rem;
+        }
+        .nav-item {
+            margin-right: 0.5rem;
+        }
+        .nav-link {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+        .dropdown-menu {
+            margin-top: 0.5rem;
+            right: 0;
+            left: auto;
+        }
+        .reg-title {
+            font-size: 15px;
+        }
+        .reg-para {
+            font-size: 10px;
+        }
+        .card-title {
+            font-family: 'MADE Outer Sans';
+            font-weight: 300;
+        }
+        .card-text {
+            font-family: 'MADE Outer Sans';
+            font-weight: 200;
+        }
+        .heads {
+            font-family: 'MADE Outer Sans';
+            font-weight: 300;
+        }
+        .hghg{
+         background-color: #262525;
+         color: rgba(255, 255, 255, 0.745);
+         border: 1px solid rgba(255, 255, 255, 0.826) ;
+        }
+    </style>
+</head>
+<body class="grid-background">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-transparent heads fixed-top">
+        <a class="navbar-brand" href="#"><i class="fa-solid fa-tablet"></i> TrackWave Admin</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      
+        <div class="collapse navbar-collapse justify-content-center" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+              <a class="nav-link nav-link disabled" href="#">Dashboard <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link nav-link disabled" href="#">Manage Users</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link nav-link disabled" href="#">Reports</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="index.html">Back</a>
+            </li>
+          </ul>
+          <!-- Right-aligned items -->
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="admin_registration.php">registration</a>
+              <a class="nav-link" href="admin_login.php">Login </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+      <br>
+      <br>
+      <br>
+      <br>
+      
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <h1>Admin Dashboard</h1>
+            <p style="color: #535353;">Manage your system efficiently and effectively</p>
+            <a href="admin_login.php"> <button class="btn btn-custom heads">Go to Dashboard <i class="fa-solid fa-arrow-right-long"></i></button></a>
+        </div>
+    </div>
+    <br>
+    <br>
+    <div class="d-flex justify-content-center">
+        <div class="card m-2" style="width: 15rem; background-color: rgb(244,244,245)">
+          <div class="card-body">
+            <i class="fa-solid fa-users"></i>
+            <h5 class="card-title">User Management</h5>
+            <p class="card-text">Manage all registered users</p>
+          </div>
+        </div>
+        <div class="card m-2" style="width: 15rem; background-color: rgb(244,244,245)">
+          <div class="card-body">
+            <i class="fa-solid fa-chart-bar"></i>
+            <h5 class="card-title">View Reports</h5>
+            <p class="card-text">Analyze system usage reports</p>
+          </div>
+        </div>
+        <div class="card m-2" style="width: 15rem; background-color: rgb(244,244,245)">
+          <div class="card-body">
+            <i class="fa-solid fa-cogs"></i>
+            <h5 class="card-title">System Settings</h5>
+            <p class="card-text">Configure system settings</p>
+          </div>
+        </div>
+      </div>
+      
+      
+      
+          <br>
+    <br>
+    <br>
+
+    <!-- Features Section -->
+    <div class="features-section  hghg">
+        <div class="container">
+            <h2 class="text-center heads">Admin Tools and Features</h2>
+            <p class="text-center">Empower your administration with robust tools and features</p>
+            <div class="row">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom hghg">
+                        <img src="img/ad1.PNG" class="card-img-top cursor-none" alt="User Management">
+                        <div class="card-body">
+                            <h5 class="card-title">User Management</h5>
+                            <p class="card-text">Easily manage and track all users in the system.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom hghg">
+                        <img src="img/ad2.PNG" class="card-img-top cursor-none" alt="Reports">
+                        <div class="card-body">
+                            <h5 class="card-title">Reports</h5>
+                            <p class="card-text">Generate detailed reports to analyze system usage and performance.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom hghg">
+                        <img src="img/ad3.PNG" class="card-img-top cursor-none" alt="Settings">
+                        <div class="card-body">
+                            <h5 class="card-title">Students</h5>
+                            <p class="card-text">Track students on the system and the attendance percentage .</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  
+
+    <!-- Bootstrap JS, Popper.js, and jQuery -->
+    <script src="https://kit.fontawesome.com/da3601086d.js" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

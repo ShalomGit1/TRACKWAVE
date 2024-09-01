@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preload" href="MADEOuterSansAlt-Light.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Black.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Bold.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Thin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSans-Medium.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSans-Light.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Medium.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="MADEOuterSansAlt-Thin.woff2" as="font" type="font/woff2" crossorigin>
+    <title>Landing Page</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .grid-background {
+         
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* transition: ease-in 1s; */
+    z-index: -1; /* Ensure grid is behind content */
+    background-size: 200px 200px;
+    /* background-color:rgb(35, 32, 32); */
+    background-color:rgb(244,244,245);
+    background-image: linear-gradient(to right, rgba(204, 204, 204, 0.19) 2px, transparent 1px),
+                      linear-gradient(to bottom, rgba(204, 204, 204, 0.163) 2px, transparent 1px);
+
+}
+
+
+.content {
+    position: relative; /* Ensure content is positioned relative for z-index */
+    z-index: 1; /* Ensure content is above grid */
+    padding: 20px; /* Example padding */
+}
+
+        body {
+            /* background: linear-gradient(to bottom right, rgb(241,241,242), rgb(244,244,245)); */
+            color: #262525;
+            font-family: 'Arial', sans-serif;
+        }
+        .hero-section {
+            text-align: center;
+            padding: 100px 20px;
+        }
+        .hero-section h1 {
+            font-size: 2.5rem;
+            font-family: 'MADE Outer Sans Alt';
+    font-weight: bold;
+    font-style: normal;
+        }
+        .hero-section p {
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+            font-family: 'MADE Outer Sans';
+    font-weight: 200;
+    font-style: normal;
+        }
+        .btn-custom {
+            background-color: rgb(9,9,11);
+            color: #f3f3f3;
+            border-radius: 5px;
+            padding: 10px 20px;
+        }
+        .navbar-custom {
+            background-color: transparent;
+        }
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: rgb(9,9,11)#333;
+        }
+        .features-section {
+            padding: 60px 20px;
+        }
+       
+            
+            
+
+        
+
+        .card-custom {
+            border: 1px solid linear-gradient(to bottom right, rgb(255, 255, 255), rgb(244, 244, 245));
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .card-custom img {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        .card-custom .card-body {
+            padding: 20px;
+        }
+         /* Custom CSS to reduce spacing */
+         .navbar {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        .navbar-brand {
+            margin-right: 1rem;
+        }
+        .nav-item {
+            margin-right: 0.5rem;
+        }
+        .nav-link {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+        .dropdown-menu {
+            margin-top: 0.5rem;
+            right: 0; /* Ensure dropdown is aligned properly */
+            left: auto; /* Ensure dropdown is aligned properly */
+        }
+        .reg-title{
+            font-size: 15px;
+            
+        }
+       
+        .reg-para{
+            font-size: 10px;
+
+
+
+        }
+        .card-title{
+            font-family: 'MADE Outer Sans';
+    font-weight: 300;
+    font-style: normal;
+        }
+        .card-text{
+            font-family: 'MADE Outer Sans';
+    font-weight: 200;
+    font-style: normal;
+        }
+        .heads{
+            font-family: 'MADE Outer Sans';
+    font-weight: 300;
+    font-style: normal;
+
+        }
+
+
+        /* ---------------------------------lightmode----------------- */
+        body.dark-mode {
+	background-color: #333;
+	color: #fff;
+}
+
+.bg-light.dark-mode {
+	background-color: #333 !important;
+}
+
+.text-light.dark-mode {
+	color: #fff !important;
+}
+
+.switch-container {
+	position: relative;
+	display: inline-block;
+	margin: 20px;
+}
+
+.switch {
+	position: relative;
+	display: inline-block;
+	width: 40px;
+	height: 20px;
+	background-color: #ccc;
+	border-radius: 20px;
+	padding: 2px;
+	cursor: pointer;
+}
+
+.slider {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 20px;
+	height: 20px;
+	background-color: #fff;
+	border-radius: 50%;
+	transform: translateX(0);
+	transition: transform 0.3s ease-in-out;
+}
+
+.slider:checked {
+	transform: translateX(20px);
+}
+.foot{
+    background-color: black;
+    color: aliceblue;
+}
+.foot-a a{
+    text-decoration: none;
+    color: white;
+}
+
+       
+    </style>
+</head>
+<body class="grid-background ">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-transparent heads fixed-top">
+        <a class="navbar-brand" href="#"><i class="fa-solid fa-tablet"></i>  TrackWave</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      
+        <div class="collapse navbar-collapse justify-content-center" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+              <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link " href="#about">About</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#faq">FAQ's</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="admin.html">Admin</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="scan.html">QR scanner</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="duc.html">User-Guide</a>
+            </li>
+          </ul>
+          <!-- Right-aligned items -->
+           <!-- Your landing page content goes here -->
+	
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="login.php">Login</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="registration.php">Sign Up</a>
+            </li>
+            <div class="container">
+                <div class="switch-container">
+                    <label class="switch">
+                        <input type="checkbox" id="mode-switch">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        
+          </ul>
+        </div>
+      </nav>
+      <br>
+      <br>
+      <br>
+      <br>
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <!-- <img src="img/undraw_Dashboard_re_3b76.png" alt="Dashboard Illustration" class="img-fluid"> -->
+            <h1>NEXT GENERATION
+                rfid/QR attendance tracker</h1>
+            <p style="color: #535353;">Find the solution to tracking your attendance effectively and efficiently</p>
+            <a href="registration.php"> <button class="btn btn-custom heads">Get Started Now   <i class="fa-solid fa-arrow-right-long"></i></button></a>
+        </div>
+    </div>
+    <br>
+    <br>
+    <div class="d-flex justify-content-center ">
+        <div class="card m-2 " style="width: 15rem; background-color: rgb(244,244,245) ">
+          <div class="card-body">
+            <i class="fa-solid fa-star"></i>
+            <h5 class="card-title">Best Quality</h5>
+            <p class="card-text">Our Service is The Best</p>
+          </div>
+        </div>
+        <div class="card m-2 " style="width: 15rem; background-color: rgb(244,244,245) ">
+          <div class="card-body">
+            <i class="fa-solid fa-lock"></i>
+            <h5 class="card-title">Trusted By Institutions</h5>
+            <p class="card-text">Collages and Uni Trust Our System</p>
+          </div>
+        </div>
+        <div class="card m-2 " style="width: 15rem; background-color: rgb(244,244,245) ;border:2px solid black; ">
+          <div class="card-body">
+            <i class="fa-solid fa-phone"></i>
+            <h5 class="card-title">Customer Satisfaction</h5>
+            <p class="card-text">87% Of our Customers Like Our Product</p>
+          </div>
+        </div>
+      </div>
+      
+      
+      
+          <br>
+    <br>
+    <br>
+
+    <!-- Features Section -->
+    <div class="features-section" id="about">
+        <div class="container">
+            <h2 class="text-center heads">Simplify Attendance Management</h2>
+            <p class="text-center">What is the use of a platform if a user cant simply navigate through and get the job done ? thats why we have </p>
+            <div class="row">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom"  style="border: 2px solid rgba(0, 0, 0, 0.596);">
+                        <img src="img/1.1.PNG" class="card-img-top cursor-none" alt="Create Elections">
+                        <div class="card-body">
+                            <h5 class="card-title">Session Tracking</h5>
+                            <p class="card-text"> Accurately record attendance for specific classes, sessions, or events. Automatically mark students or employees present when they enter the designated area.
+
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom">
+                        <img src="img/1.1.PNG" class="card-img-top  cursor-none" alt="Unique Access Codes">
+                        <div class="card-body">
+                            <h5 class="card-title">Live Attendance</h5>
+                            <p class="card-text"> Display up-to-the-minute attendance information for students or employees. View live attendance data to identify absences or irregularities and take swift action.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom">
+                        <img src=" img/1.2.PNG" class="card-img-top cursor-none" alt="Secure Voting">
+                        <div class="card-body">
+                            <h5 class="card-title">History</h5>
+                            <p class="card-text">Store comprehensive attendance records for future reference. Access historical attendance data to analyze patterns and trends over time.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom">
+                        <img src="img/1.3.PNG" class="card-img-top" alt="Eligibility Check">
+                        <div class="card-body">
+                            <h5 class="card-title">Profile</h5>
+                            <p class="card-text">Manage individual profiles for students or employees, storing personal information and attendance records. Ensure accurate attendance tracking and record-keeping.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card card-custom">
+                        <img src="img/1.4.PNG" class="card-img-top" alt="Real-time Results">
+                        <div class="card-body">
+                            <h5 class="card-title">Events </h5>
+                            <p class="card-text">Implement advanced encryption and secure authentication protocols to protect user data. Ensure confidentiality of attendance records and personal information with role-based access control.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <div class="faq-section py-7 px-5 ml-0 " style="background-color: rgb(34, 34, 36);color: #f3f3f3; border: 1px white;
+" id="faq">
+            <h2 class="heads">Frequently Asked Questions</h2>
+            <div class="row">
+              <div class="col-md-4">
+                <div class="card bg-transparent border-0">
+                  <div class="card-body">
+                    <h5 class="card-title">What is RFID attendance management and how it works ?</h5>
+                    <p class="card-text">RFID attendance management uses radio-frequency identification technology to track student or employee attendance, automatically marking them present when they enter the premises, ensuring accurate and efficient attendance tracking.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-transparent border-0">
+                  <div class="card-body">
+                    <h5 class="card-title">How do I tag students or employees for attendance tracking?
+                    </h5>
+                    <p class="card-text"> Students or employees are assigned a unique RFID card or tag, which they must swipe or wear to be detected by the RFID reader, ensuring accurate identification and attendance tracking.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-transparent border-0">
+                  <div class="card-body">
+                    <h5 class="card-title">Can RFID attendance management integrate with existing systems?
+                    </h5>
+                    <p class="card-text">Yes, our RFID attendance management system seamlessly integrates with existing school or company databases, HR software, and learning management systems, ensuring a streamlined attendance tracking process</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-transparent border-0">
+                  <div class="card-body">
+                    <h5 class="card-title"> How accurate is RFID attendance tracking compared to manual methods?
+                    </h5>
+                    <p class="card-text">RFID attendance tracking is significantly more accurate than manual methods, eliminating human errors, forgotten signatures, and fraudulent entries, providing precise attendance records.
+
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-transparent border-0">
+                  <div class="card-body">
+                    <h5 class="card-title">Are RFID tags or cards secure, and what data is stored?
+                    </h5>
+                    <p class="card-text">RFID tags or cards use advanced encryption and secure authentication protocols to protect individual data, storing only essential information like names, IDs, and attendance records.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-transparent border-0">
+                  <div class="card-body">
+                    <h5 class="card-title"> Can parents or guardians access their child's attendance records?</h5>
+                    <p class="card-text">Not yet, our RFID  attendance management system would possibly provides a user-friendly portal for parents or guardians to access their child's attendance records, ensuring transparency and real-time updates.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card bg-transparent border-0">
+                  <div class="card-body">
+                    <h5 class="card-title">How does RFID attendance management improve student or employee accountability?
+                    </h5>
+                    <p class="card-text">By accurately tracking attendance, RFID attendance management promotes accountability, encouraging students and employees to arrive on time and attend classes or work regularly, fostering a culture of responsibility and punctuality. </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          
+          
+    </div>
+    <footer class="footer py-4 foot text-black">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-4">
+              <h5>About Us</h5>
+              <p>Revolutionilizing the attendance cummunity </p>
+            </div>
+            <div class="foot-a col-md-4">
+              <h5>Quick Links</h5>
+              <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html">About</a></li>
+                <li><a href="index.html">Contact</a></li>
+              </ul>
+            </div>
+            <div class="foot-a col-md-4">
+              <h5>Follow Us</h5>
+              <ul>
+                <li><a href="#"><i class="fa-brands fa-facebook"></i> Facebook</a></li>
+                <li><a href="#"><i class="fa-brands fa-twitter"></i> Twitter</a></li>
+                <li><a href="#"><i class="fa-brands fa-instagram"></i> Instagram</a></li>
+              </ul>
+            </div>
+          </div>
+          <hr>
+          <p class="text-center">Copyright © 2023 All rights reserved.</p>
+        </div>
+      </footer>
+      <script>
+        const modeSwitch = document.getElementById('mode-switch');
+
+modeSwitch.addEventListener('change', () => {
+	document.body.classList.toggle('dark-mode');
+});
+
+      </script>
+
+    <!-- Bootstrap JS, Popper.js, and jQuery -->
+    <script src="https://kit.fontawesome.com/da3601086d.js" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

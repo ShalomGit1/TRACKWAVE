@@ -1,0 +1,94 @@
+/* body{
+    
+    background-color: rgba(243, 243, 243, 1);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+}
+
+.sign-up {
+    width: 360px;
+    height: 620px;
+    margin: auto;
+    background-color: white;
+    border-radius: 3px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.103);
+
+
+}
+
+h1{
+    text-align: center;
+    padding-top: 15px;
+}
+
+h4{
+    text-align: center;
+}
+form{
+    width: 300px;
+    margin-left: 20px;
+}
+form label{
+    display: flex;
+    margin-top: 20px;
+    font-size: 18px;
+
+}
+
+form input{
+    width: 100%;
+    padding: 7px;
+    border: none;
+    border: solid 1px gray;
+    border-radius: 5px;
+    outline: none;
+}
+
+input[type="submit"]{
+    width: 320px;
+    height: 35px;
+    margin-top: 20px;
+    border: none;
+    background-color: orange;
+    font-size: 18px;
+    transition: ease 0.7s;
+}
+input[type="button"]:hover{
+    background-color: rgb(233, 155, 10);
+
+
+}
+.para-2{
+    text-align: center;
+    padding-top: 20px;
+    font-size: 10px;
+}
+.para-2 a{
+    color:orange ;
+} */
+body{
+    font-family: 'MADE Outer Sans';
+    font-weight: 300;
+    font-style: normal;
+    padding: 50px;
+    background-color: rgba(243, 243, 243, 1);
+
+}
+.sign-up{
+    max-width: 600px;
+    margin: auto;
+    padding: 50px;
+    box-shadow: rgba(10, 10, 92, 0.2)0px 7px 29px 0px;
+    background-color: rgb(255, 255, 255);
+
+
+}
+.sign-up h1{
+    font-family: 'MADE Outer Sans Alt';
+    font-weight: bold;
+    font-style: normal;
+}
+
+.form-group{
+    margin-bottom: 30px;
+}
